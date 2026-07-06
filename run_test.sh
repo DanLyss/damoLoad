@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 echo "=== Собираем hammer ==="
-gcc -O0 -o /tmp/hammer /mnt/c/Users/Dan/damo/hammer/hammer.c
+gcc -O0 -o /tmp/hammer "$SCRIPT_DIR/hammer/hammer.c"
 HZ=${1:-2000}
 DURATION=${2:-10}
 PAGES=${3:-10}

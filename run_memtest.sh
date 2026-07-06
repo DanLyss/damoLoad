@@ -2,13 +2,14 @@
 # run_memtest.sh — build, run, record with DAMON, compare
 #
 # Usage:
-#   sudo bash /mnt/c/Users/Dan/damo/run_memtest.sh [workload.json] [gt.log] [damon.data]
+#   sudo bash run_memtest.sh [workload.json] [gt.log] [damon.data]
 
-WORKLOAD=${1:-/mnt/c/Users/Dan/damo/memtest/example.json}
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+WORKLOAD=${1:-"$SCRIPT_DIR/memtest/example.json"}
 GT_OUT=${2:-/tmp/gt.log}
 DAMON_OUT=${3:-/root/damon_test.data}
-MEMTEST_DIR=/mnt/c/Users/Dan/damo/memtest
-COMPARE_PY=/mnt/c/Users/Dan/damo/compare.py
+MEMTEST_DIR="$SCRIPT_DIR/memtest"
+COMPARE_PY="$SCRIPT_DIR/compare.py"
 MEMTEST_LOG=/tmp/memtest_out.txt
 
 # ── 0. print config ───────────────────────────────────────────────────────────
