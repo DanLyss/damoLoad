@@ -149,11 +149,24 @@ See [hammer/README.md](hammer/README.md).
 
 ## Known Patch Dependencies
 
-The test environment runs a patched WSL2 kernel. Not all patches may be merged into mainline Linux yet. If you hit issues on a stock kernel, these are the likely culprits:
+### `damo` userspace tool — critical fix required
 
-> TODO: list specific patch subjects / commit hashes once confirmed.
+**[damonitor/damo PR #55](https://github.com/damonitor/damo/pull/55)** — `damo_report_heatmap: fix age backfill causing inflated access frequency in full recordings` (merged 2026-07-02).
 
-If you're running a stock kernel ≥ 6.8 with damo 3.3.0 and hit `EINVAL` or empty DAMON output, open an issue with `uname -r` and `damo version`.
+Without this fix, `damo report heatmap` inflates reported frequencies **2–3×** in continuous recordings. Root cause: `add_pixel_heat()` extends the observe window backwards using region age (useful for sparse single-snapshot recordings), but doesn't clip it against the previous snapshot — so in a full recording every snapshot double-counts time already accounted by the previous one.
+
+**Effect:** a 200 Hz process was reported as 500–1400 Hz. The inflation factor is `(age_cycle_length + 1) / 2`.
+
+**Fix:** clips the backfill in `add_pixel_heat()` the same way `pixels_idxs_range()` already does.
+
+**How to get it:** install damo from git after 2026-07-02, or wait for the PyPI release that follows damo 3.3.0:
+```bash
+pip install git+https://github.com/damonitor/damo.git
+```
+
+### Linux kernel
+
+Tested on `6.18.x-microsoft-standard-WSL2` with `CONFIG_DAMON_VADDR=y`, `CONFIG_DAMON_SYSFS=y`. Should work on any kernel ≥ 6.8 with those options enabled. Local kernel patches (if any) will be documented here as they are identified.
 
 ---
 
