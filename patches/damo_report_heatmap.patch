@@ -1,0 +1,57 @@
+--- /home/goidan/damo/src/damo_report_heatmap.py	2026-07-02 14:54:18.802739771 +0300
++++ /usr/local/lib/python3.12/dist-packages/damo/damo_report_heatmap.py	2026-07-03 17:45:01.734716759 +0300
+@@ -85,12 +85,14 @@
+         return int((addr - self.addr_start) / self.addr_unit)
+ 
+     def add_pixel_heat(self, pixels_idx, pixel_idx, region, snapshot,
+-                       record_intervals, df_passed):
++                       last_snapshot, record_intervals, df_passed):
+         pixel = self.pixels[pixels_idx][pixel_idx]
+         observe_start_time = snapshot.start_time
+         if record_intervals is not None:
+-            observe_start_time -= region.age.aggr_intervals * \
+-                    record_intervals.aggr * 1000
++           observe_start_time -= region.age.aggr_intervals * \
++                   record_intervals.aggr * 1000
++           if last_snapshot is not None and observe_start_time < last_snapshot.end_time:
++               observe_start_time = last_snapshot.end_time
+ 
+         account_time_start = max(observe_start_time, pixel.time)
+         account_time_end = min(snapshot.end_time, pixel.time + self.time_unit)
+@@ -99,7 +101,6 @@
+         account_addr_start = max(region.start, pixel.addr)
+         account_addr_end = min(region.end, pixel.addr + self.addr_unit)
+         account_sz = account_addr_end - account_addr_start
+-
+         if record_intervals is not None:
+             aggr_us = damo_report_access.snapshot_monitoring_intervals(
+                     snapshot, record_intervals)[1]
+@@ -109,15 +110,14 @@
+         if df_passed:
+             heat_val = heat_val * region.sz_filter_passed / region.size()
+ 
+-        heat = heat_val * account_time * account_sz
++        # Sum sub-region frequencies instead of space-weighted average.
++        heat = heat_val * account_time
+ 
+         if pixel.heat is None:
+             pixel.heat = 0
+ 
+-        pixel_time_space = self.time_unit * self.addr_unit
+-
+-        heat += pixel.heat * pixel_time_space
+-        pixel.heat = float(heat) / pixel_time_space
++        heat += pixel.heat * self.time_unit
++        pixel.heat = float(heat) / self.time_unit
+ 
+     def pixels_idxs_range(self, region, snapshot, last_snapshot, aggr_ns):
+         start_time = snapshot.start_time
+@@ -150,7 +150,7 @@
+                         continue
+                     self.add_pixel_heat(
+                             pixels_idx, pixel_idx, region, snapshot,
+-                            record_intervals, df_passed)
++                            last_snapshot, record_intervals, df_passed)
+ 
+     def highest_lowest_heats(self):
+         highest = None

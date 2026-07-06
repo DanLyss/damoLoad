@@ -313,7 +313,7 @@ Both heatmaps share the same scale. Time goes down, space goes right.
 
 ## Pre-made Configs
 
-80+ workload configs are provided in `configs/`:
+100 workload configs are provided in `configs/`:
 
 | Range  | What they test |
 |--------|----------------|
@@ -321,7 +321,7 @@ Both heatmaps share the same scale. Time goes down, space goes right.
 | 11–20  | All temporal and spatial types individually |
 | 21–35  | Combined spatial×temporal, multiple tracks, large regions |
 | 36–50  | Multiple regions, phase-shifted tracks, burst detection, stress tests |
-| 51–83  | 100-region stress tests: uniform, sine sweeps, square anti-phase, cascades, hotspot gradients, Zipf, Gaussian, burst visibility |
+| 51–100 | 100-region stress tests: uniform, sine sweeps, square anti-phase, cascades, hotspot gradients, Zipf, Gaussian, burst visibility |
 
 To regenerate:
 ```bash
