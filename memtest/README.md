@@ -55,7 +55,7 @@ memtest/
 │   └── gen_configs_hard.py  — generates configs 51+ (100-region stress tests)
 ├── build/              — compiled output (created by make)
 │   └── memtest
-├── configs/            — 80+ pre-made workload JSON files
+├── configs/            — 100 pre-made workload JSON files
 └── results/            — saved heatmap comparison logs
 ```
 
