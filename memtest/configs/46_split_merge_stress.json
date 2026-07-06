@@ -1,0 +1,62 @@
+{
+  "duration_sec": 30,
+  "heatmap_time_rows": 30,
+  "heatmap_space_cols": 16,
+  "regions": [
+    {
+      "pages": 16
+    }
+  ],
+  "tracks": [
+    {
+      "region": 0,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "hot_ratio": 0.7
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 200
+      },
+      "start_sec": 0,
+      "end_sec": 15
+    },
+    {
+      "region": 0,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          12,
+          13,
+          14,
+          15
+        ],
+        "hot_ratio": 0.7
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 200
+      },
+      "start_sec": 15,
+      "end_sec": 30
+    },
+    {
+      "region": 0,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 20
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    }
+  ]
+}

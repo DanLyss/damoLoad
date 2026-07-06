@@ -1,0 +1,50 @@
+{
+  "duration_sec": 20,
+  "heatmap_time_rows": 20,
+  "heatmap_space_cols": 10,
+  "regions": [
+    {
+      "pages": 10
+    }
+  ],
+  "tracks": [
+    {
+      "region": 0,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0,
+          1
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 1,
+            "duration_sec": 4
+          },
+          {
+            "hz": 5,
+            "duration_sec": 4
+          },
+          {
+            "hz": 10,
+            "duration_sec": 4
+          },
+          {
+            "hz": 20,
+            "duration_sec": 4
+          },
+          {
+            "hz": 50,
+            "duration_sec": 4
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    }
+  ]
+}

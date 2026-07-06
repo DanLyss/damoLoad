@@ -1,0 +1,32 @@
+{
+  "duration_sec": 15,
+  "heatmap_time_rows": 15,
+  "heatmap_space_cols": 50,
+  "regions": [
+    {
+      "pages": 50
+    }
+  ],
+  "tracks": [
+    {
+      "region": 0,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 15
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "duration_sec": 20,
+  "heatmap_time_rows": 20,
+  "heatmap_space_cols": 10,
+  "regions": [
+    {
+      "pages": 10
+    }
+  ],
+  "tracks": [
+    {
+      "region": 0,
+      "spatial": {
+        "type": "all"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 60,
+        "amplitude": 50,
+        "period_sec": 3.0
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    }
+  ]
+}

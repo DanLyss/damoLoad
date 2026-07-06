@@ -1,0 +1,5 @@
+memtest/build/
+memtest/results/
+/tmp/
+*.data
+*.swp

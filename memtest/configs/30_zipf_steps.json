@@ -1,0 +1,42 @@
+{
+  "duration_sec": 20,
+  "heatmap_time_rows": 20,
+  "heatmap_space_cols": 10,
+  "regions": [
+    {
+      "pages": 10
+    }
+  ],
+  "tracks": [
+    {
+      "region": 0,
+      "spatial": {
+        "type": "zipf",
+        "s": 1.5
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 30,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 180,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    }
+  ]
+}

@@ -1,0 +1,3209 @@
+{
+  "duration_sec": 20,
+  "heatmap_time_rows": 20,
+  "heatmap_space_cols": 10,
+  "regions": [
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    },
+    {
+      "pages": 10
+    }
+  ],
+  "tracks": [
+    {
+      "region": 0,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 1,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 2,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 3,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 4,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 5,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 6,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 7,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 8,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 9,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 10,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 11,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 12,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 13,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 14,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 15,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 16,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 17,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 18,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 19,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 20,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 21,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 22,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 23,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 24,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 25,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 26,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 27,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 28,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 29,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 30,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 31,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 32,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 33,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 34,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 35,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 36,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 37,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 38,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 39,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 40,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 41,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 42,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 43,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 44,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 45,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 46,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 47,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 48,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 49,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 50,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 51,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 52,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 53,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 54,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 55,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 56,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 57,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 58,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 59,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 60,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 61,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 62,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 63,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 64,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 65,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 66,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 67,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 68,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 69,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 70,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 71,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 72,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 73,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 74,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 75,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 76,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 77,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 78,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 79,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 80,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 81,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 82,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 83,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 84,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 85,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 86,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 87,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 88,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 89,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 90,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 91,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 92,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 93,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 94,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 95,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 96,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 97,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 98,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    },
+    {
+      "region": 99,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "steps",
+        "steps": [
+          {
+            "hz": 20,
+            "duration_sec": 5
+          },
+          {
+            "hz": 100,
+            "duration_sec": 5
+          },
+          {
+            "hz": 50,
+            "duration_sec": 5
+          },
+          {
+            "hz": 200,
+            "duration_sec": 5
+          }
+        ]
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    }
+  ]
+}

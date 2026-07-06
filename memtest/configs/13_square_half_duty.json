@@ -1,0 +1,26 @@
+{
+  "duration_sec": 20,
+  "heatmap_time_rows": 20,
+  "heatmap_space_cols": 5,
+  "regions": [
+    {
+      "pages": 5
+    }
+  ],
+  "tracks": [
+    {
+      "region": 0,
+      "spatial": {
+        "type": "uniform"
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.5,
+        "period_sec": 2.0
+      },
+      "start_sec": 0,
+      "end_sec": 20
+    }
+  ]
+}

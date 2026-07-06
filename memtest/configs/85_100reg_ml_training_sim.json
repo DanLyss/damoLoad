@@ -1,0 +1,1908 @@
+{
+  "duration_sec": 30,
+  "heatmap_time_rows": 30,
+  "heatmap_space_cols": 15,
+  "regions": [
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    },
+    {
+      "pages": 15
+    }
+  ],
+  "tracks": [
+    {
+      "region": 0,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 0.0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 3,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 0.189
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 6,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 0.378
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 9,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 0.567
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 12,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 0.756
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 15,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 0.9450000000000001
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 18,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 1.134
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 21,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 1.323
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 24,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 1.512
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 27,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 1.701
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 30,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 1.8900000000000001
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 33,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 2.079
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 36,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 2.268
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 39,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 2.457
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 42,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 2.646
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 45,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 2.835
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 48,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 3.024
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 51,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 3.213
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 54,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 3.402
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 57,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 3.591
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 60,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 3.7800000000000002
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 63,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 3.969
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 66,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 4.158
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 69,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 4.347
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 72,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 4.536
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 75,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 4.725
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 78,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 4.914
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 81,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 5.103
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 84,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 5.292
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 87,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 5.481
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 90,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 5.67
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 93,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 5.859
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 96,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 6.048
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 99,
+      "spatial": {
+        "type": "sequential"
+      },
+      "temporal": {
+        "type": "sine",
+        "base_hz": 80,
+        "amplitude": 60,
+        "period_sec": 6.0,
+        "phase_rad": 6.237
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 1,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 4,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 7,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 10,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 13,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 16,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 19,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 22,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 25,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 28,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 31,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 34,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 37,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 40,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 43,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 46,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 49,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 52,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 55,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 58,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 61,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 64,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 67,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 70,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 73,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 76,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 79,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 82,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 85,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 88,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 91,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 94,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 97,
+      "spatial": {
+        "type": "gaussian",
+        "center": 7,
+        "sigma": 3
+      },
+      "temporal": {
+        "type": "const",
+        "hz": 150
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 2,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 5,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 8,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 11,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 14,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 17,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 20,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 23,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 26,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 29,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 32,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 35,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 38,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 41,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 44,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 47,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 50,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 53,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 56,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 59,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 62,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 65,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 68,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 71,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 74,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 77,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 80,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 83,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 86,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 89,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 92,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 95,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    },
+    {
+      "region": 98,
+      "spatial": {
+        "type": "hotspot",
+        "hot_pages": [
+          0
+        ],
+        "hot_ratio": 0.9
+      },
+      "temporal": {
+        "type": "square",
+        "on_hz": 200,
+        "duty": 0.2,
+        "period_sec": 1.0,
+        "phase_rad": 0
+      },
+      "start_sec": 0,
+      "end_sec": 30
+    }
+  ]
+}
