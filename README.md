@@ -1,6 +1,11 @@
 # damoLoad
 
-Tools for generating controlled memory access workloads and comparing them against what [DAMON](https://docs.kernel.org/mm/damon/index.html) actually observes. Useful for understanding DAMON's sampling behavior, detection limits, and region adaptation.
+Tools for generating controlled memory access workloads and comparing them against what [DAMON](https://docs.kernel.org/mm/damon/index.html) actually observes.
+
+Useful for:
+- understanding DAMON's sampling behavior and detection limits
+- validating kernel patches that change DAMON's monitoring accuracy
+- reproducing specific access patterns and checking what the kernel sees
 
 ---
 
@@ -8,13 +13,13 @@ Tools for generating controlled memory access workloads and comparing them again
 
 ```
 damoLoad/
-├── run_memtest.sh   — automated end-to-end runner (build → DAMON → compare)
+├── run_memtest.sh   — end-to-end runner: build → record → compare
 ├── compare.py       — per-region GT vs DAMON ASCII heatmap renderer
 ├── memtest/         — structured workload generator with ground truth logging
 │   ├── README.md
 │   ├── Makefile
 │   ├── src/         — C sources
-│   ├── configs/     — 80+ pre-made JSON workloads
+│   ├── configs/     — 100+ pre-made JSON workloads
 │   └── scripts/     — config generators
 └── hammer/          — minimal single-file load generator for quick experiments
     ├── hammer.c
@@ -23,13 +28,24 @@ damoLoad/
 
 ---
 
-## Quick Start
+## Requirements
 
-Requires: Linux with DAMON (`CONFIG_DAMON=y`), `damo` installed, GCC, Python 3.
+| Component | Version / Notes |
+|-----------|----------------|
+| Linux kernel | ≥ 6.8 with `CONFIG_DAMON=y`, `CONFIG_DAMON_VADDR=y`, `CONFIG_DAMON_SYSFS=y` |
+| damo | ≥ 3.3.0 (`pip install damo`) |
+| GCC | any modern version |
+| Python | ≥ 3.10 |
+
+> **Note:** The authors run this on a custom WSL2 kernel (`6.18.x-microsoft-standard-WSL2+`) with additional DAMON patches not yet merged upstream. Some features or behavior may differ on stock kernels. See [Known Patch Dependencies](#known-patch-dependencies) below.
+
+---
+
+## Quick Start
 
 ```bash
 # clone
-git clone https://github.com/daniellysy566/damoLoad.git
+git clone https://github.com/DanLyss/damoLoad.git
 cd damoLoad
 
 # run a workload (builds memtest, records with DAMON, shows heatmap)
@@ -43,23 +59,47 @@ Results are saved to `memtest/results/`.
 
 ---
 
-## Components
+## `run_memtest.sh` — What It Does
 
-### `memtest/` — Structured Workload Generator
+This is the main entry point. You give it a config JSON, it does everything automatically:
 
-Runs configurable access patterns (sine, square, Zipf, hotspot, …) across multiple memory regions, logs every access with nanosecond timestamps (ground truth), then compares against DAMON's output.
+```bash
+sudo bash run_memtest.sh [config.json] [gt.log] [damon.data]
+```
 
-See [memtest/README.md](memtest/README.md) for the full JSON workload format.
+**Step by step:**
 
-### `hammer/` — Quick Load Generator
+1. **Prints the config** — duration, regions, tracks, heatmap resolution
+2. **Builds `memtest`** via `make` (incremental)
+3. **Starts `memtest --auto config.json gt.log`** — the process mmaps all regions, prefaults all pages, then waits for `SIGUSR1` before starting accesses
+4. **Parses the printed region addresses** from memtest's stdout — gets the exact virtual address ranges that were mmap'd
+5. **Builds DAMON config** — uses `damo args damon` for the first region to get the correct JSON schema, then patches in all 100 (or N) regions sorted by ascending address. Sorting is required by the DAMON kernel interface.
+6. **Starts `damo record`** — records DAMON observations to a `.data` file
+7. **Sends `SIGUSR1`** to memtest — workload begins
+8. **Waits** for both memtest and damo to finish
+9. **Runs `compare.py`** — for each region, calls `damo report heatmap --address_range START END` scoped to that region, renders GT and DAMON side by side as ASCII heatmaps
+10. **Saves result** to `memtest/results/<config_name>_<time>.txt`
 
-Single C file. Hammers one region at a fixed Hz and prints its PID + address for immediate use with `damo record`.
+**Why `--auto` mode?** Without it, you'd have to manually read the PID and region addresses from memtest's output, configure DAMON, and signal the process yourself. `--auto` mode makes memtest print machine-readable markers (`# PID=`, `# REGION`, `# READY`) so `run_memtest.sh` can parse them and automate everything.
 
-See [hammer/README.md](hammer/README.md).
+**Why `fvaddr` ops?** `fvaddr` (fixed virtual address) is DAMON's mode for monitoring specific virtual address ranges of a process. Unlike `vaddr` mode (which adapts region boundaries), `fvaddr` keeps the regions exactly where we specify — matching the mmap'd regions in memtest. This is critical for comparing against ground truth.
 
-### `compare.py` — Heatmap Renderer
+**Why sort regions?** The DAMON kernel sysfs interface rejects configurations where regions are not in ascending order of start address — it returns `EINVAL`. memtest prints regions in allocation order (often descending), so `run_memtest.sh` sorts them before passing to DAMON.
 
-Called automatically by `run_memtest.sh`. For each region, calls `damo report heatmap --address_range` to scope the DAMON data, then renders GT and DAMON side by side:
+---
+
+## `compare.py` — Per-Region Heatmaps
+
+Called automatically by `run_memtest.sh`, but can be run standalone:
+
+```bash
+python3 compare.py damon.data gt.log [time_rows] [space_cols] [damon_base] [damon_max]
+```
+
+For each region it:
+1. Builds a GT heatmap from the ground truth log (exact access timestamps + page indices)
+2. Calls `damo report heatmap --resol T S --address_range START END --output raw` — lets damo do the binning, scoped to this region's VA range
+3. Renders both side by side with a shared Hz scale
 
 ```
 ═══════════════════════════════════════════════════════
@@ -83,11 +123,43 @@ Called automatically by `run_memtest.sh`. For each region, calls `damo report he
      p0      10.8       13.8  1.28  ████████████████████
 ```
 
+Time goes down (one row = duration/time_rows seconds). Space goes right (one col = region_size/space_cols).
+
 ---
 
-## Key Findings
+## Components
 
-- **DAMON samples 1 random page per region per 5ms** — observed Hz ≈ real Hz × (pages_in_region)⁻¹ for uniform patterns
-- **100-region configs**: DAMON requires regions sorted by ascending start address; `run_memtest.sh` handles this automatically
-- **bounding-box problem**: avoid a single DAMON region spanning 100 separate mmaps — use per-region `-r` flags instead (done automatically)
-- **`--address_range`** in `damo report heatmap` scopes each per-region heatmap correctly even when addresses are far apart
+### `memtest/` — Structured Workload Generator
+
+Runs configurable access patterns across multiple memory regions, logs every access with nanosecond timestamps (ground truth), then compares against DAMON's output.
+
+Patterns are described along two orthogonal axes:
+- **Temporal** — *when* and *how often*: `const`, `sine`, `square`, `ramp`, `steps`
+- **Spatial** — *which page*: `uniform`, `hotspot`, `zipf`, `gaussian`, `sequential`, `all`
+
+See [memtest/README.md](memtest/README.md) for the full JSON workload format.
+
+### `hammer/` — Quick Load Generator
+
+Single C file. Hammers one region at a fixed Hz and prints its PID + address for immediate use with `damo record`. No config file needed.
+
+See [hammer/README.md](hammer/README.md).
+
+---
+
+## Known Patch Dependencies
+
+The test environment runs a patched WSL2 kernel. Not all patches may be merged into mainline Linux yet. If you hit issues on a stock kernel, these are the likely culprits:
+
+> TODO: list specific patch subjects / commit hashes once confirmed.
+
+If you're running a stock kernel ≥ 6.8 with damo 3.3.0 and hit `EINVAL` or empty DAMON output, open an issue with `uname -r` and `damo version`.
+
+---
+
+## Key Findings About DAMON Behavior
+
+- **DAMON samples 1 random page per region per 5ms** — for a uniform pattern over N pages, observed Hz ≈ real Hz (any-page) not real Hz (per-page)
+- **100-region configs**: DAMON requires regions sorted by ascending start address — `run_memtest.sh` handles this automatically
+- **Bounding-box trap**: a single DAMON region spanning 100 separate mmaps wastes 97%+ of samples on unmapped gaps → use per-region `-r` flags (done automatically)
+- **`--address_range`** in `damo report heatmap` scopes each per-region heatmap to the correct VA range even when regions are far apart in address space
