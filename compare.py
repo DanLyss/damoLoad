@@ -99,13 +99,13 @@ def build_gt_grid(entries, region_idx, n_pages, t_rows, s_cols, t0_ns, t1_ns):
 
 # ── DAMON heatmap — one call per region via damo --address_range ──────────────
 
-def build_damon_grid(damon_path, t_rows, s_cols, addr_start=None, addr_end=None):
+def build_damon_grid(damon_path, t_rows, s_cols, addr_start=None, addr_end=None, damo_exe='damo'):
     """
     Run damo report heatmap scoped to [addr_start, addr_end) using damo's own
     --address_range option.  damo bins the data into t_rows × s_cols pixels;
     we just parse the raw output directly into a grid.
     """
-    cmd = ['damo', 'report', 'heatmap',
+    cmd = [damo_exe, 'report', 'heatmap',
            '--input', damon_path,
            '--resol', str(t_rows), str(s_cols),
            '--output', 'raw']
@@ -165,13 +165,14 @@ def render(grid, t_rows, s_cols, title, min_hz, max_hz):
 
 def main():
     if len(sys.argv) < 3:
-        print(f'Usage: {sys.argv[0]} damon_data gt.log [time_rows] [space_cols] [damon_base] [damon_max]')
+        print(f'Usage: {sys.argv[0]} damon_data gt.log [time_rows] [space_cols] [damon_base] [damon_max] [damo_exe]')
         sys.exit(1)
 
     damon_path = sys.argv[1]
     gt_path    = sys.argv[2]
     damon_base = int(sys.argv[5]) if len(sys.argv) > 5 else None
     damon_max  = int(sys.argv[6]) if len(sys.argv) > 6 else None
+    damo_exe   = sys.argv[7] if len(sys.argv) > 7 else 'damo'
 
     print(f'Loading GT: {gt_path}')
     regions_meta, entries = load_gt(gt_path)
@@ -210,8 +211,8 @@ def main():
         addr_start = base                  if damon_base is not None else None
         addr_end   = base + n_pages * PAGE if damon_base is not None else None
         rng = f'--address_range {addr_start} {addr_end}' if addr_start else ''
-        print(f'  Running: damo report heatmap --resol {t_rows} {s_cols} {rng} --output raw')
-        damon_grid = build_damon_grid(damon_path, t_rows, s_cols, addr_start, addr_end)
+        print(f'  Running: {damo_exe} report heatmap --resol {t_rows} {s_cols} {rng} --output raw')
+        damon_grid = build_damon_grid(damon_path, t_rows, s_cols, addr_start, addr_end, damo_exe)
 
         all_gt    = [v for row in gt_grid    for v in row]
         all_damon = [v for row in damon_grid for v in row] if damon_grid else []

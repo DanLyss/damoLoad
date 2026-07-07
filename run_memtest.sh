@@ -150,6 +150,6 @@ except:
 LOGS_DIR="$MEMTEST_DIR/results"
 mkdir -p "$LOGS_DIR"
 LOG_FILE="$LOGS_DIR/$(basename "$WORKLOAD" .json)_$(date +%H%M%S).txt"
-python3 "$COMPARE_PY" "$DAMON_OUT" "$GT_OUT" $RESOL "$DAMON_MIN" "$DAMON_MAX" | tee >(sed 's/\x1b\[[0-9;]*m//g' > "$LOG_FILE")
+python3 "$COMPARE_PY" "$DAMON_OUT" "$GT_OUT" $RESOL "$DAMON_MIN" "$DAMON_MAX" "$DAMO" | tee >(sed 's/\x1b\[[0-9;]*m//g' > "$LOG_FILE")
 echo ""
 echo "==> Log saved: $LOG_FILE"
