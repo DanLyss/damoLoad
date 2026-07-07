@@ -4,7 +4,6 @@ Tools for generating controlled memory access workloads and comparing them again
 
 ```
 damoLoad/
-├── run_test.sh      — simplest first run: hammer + damo record + heatmap (no config needed)
 ├── run_memtest.sh   — full automated runner: build → record → compare
 ├── compare.py       — per-region GT vs DAMON ASCII heatmap renderer
 ├── memtest/         — structured workload generator with ground truth logging
@@ -19,16 +18,17 @@ Requires Linux with DAMON (`CONFIG_DAMON_VADDR=y`, `CONFIG_DAMON_SYSFS=y`), damo
 git clone https://github.com/DanLyss/damoLoad.git && cd damoLoad
 ```
 
-**First time? Start here** — no config needed, just hammer + DAMON:
+**Set `DAMON_DIR`** — path to the directory containing the `damo` executable (required):
 
 ```bash
-sudo bash run_test.sh [hz] [duration_sec] [pages]
-# e.g.: sudo bash run_test.sh 500 10 10
+# pip install damo  →  damo lands in /usr/local/bin
+export DAMON_DIR=/usr/local/bin
+
+# git checkout of damonitor/damo  →  damo is at the repo root
+export DAMON_DIR=/path/to/damo
 ```
 
-Builds hammer, starts it at the given Hz, records with DAMON for `duration_sec` seconds, prints a heatmap. Good for checking that your DAMON setup works.
-
-**Full structured workload with ground truth comparison:**
+**Run a workload:**
 
 ```bash
 sudo bash run_memtest.sh memtest/configs/11_sine_slow.json
