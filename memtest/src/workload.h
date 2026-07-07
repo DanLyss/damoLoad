@@ -3,8 +3,8 @@
 #include "track.h"
 #include "gt_log.h"
 
-#define MAX_REGIONS 512
-#define MAX_TRACKS  1024
+#define MAX_REGIONS 8000
+#define MAX_TRACKS  8000
 
 typedef struct {
     region_t  *regions[MAX_REGIONS];
