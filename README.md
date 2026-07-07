@@ -71,6 +71,8 @@ sudo bash run_memtest.sh [config.json] [gt.log] [damon.data]
 
 **Why sort regions?** The DAMON kernel sysfs interface rejects configurations where regions are not in ascending order of start address — it returns `EINVAL`. memtest prints regions in allocation order (often descending), so `run_memtest.sh` sorts them before passing to DAMON.
 
+**Regions are not `MAP_FIXED` by default.** `region_alloc()` (`memtest/src/region.c`) only adds `MAP_FIXED_NOREPLACE` when a config explicitly sets a region's `"address"` field — none of the 101 configs shipped in `memtest/configs/` do this, so every region in every existing config is a plain `mmap(NULL, ...)`, placed wherever the kernel's allocator puts it. In practice, consecutive anonymous mmaps tend to land packed tightly together (verified: 5497/5499 region boundaries touching with zero gap in one 5500-region run), but this is an allocator implementation detail, not a guarantee — expect occasional large gaps (one ~162 MB gap was observed in that same run) if something else gets mapped in between. Set `"address"` explicitly (memtest already supports it) if a test needs a guaranteed, controlled layout.
+
 ## `compare.py` — Per-Region Heatmaps
 
 Called automatically by `run_memtest.sh`, but can be run standalone:
