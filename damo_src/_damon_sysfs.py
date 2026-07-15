@@ -1,0 +1,1460 @@
+# SPDX-License-Identifier: GPL-2.0
+
+"""
+Contains core functions for DAMON sysfs control.
+"""
+
+import os
+import time
+
+import _damo_fmt_str
+import _damo_fs
+import _damon
+import _damon_features
+
+sysfs_root = None
+
+def get_sysfs_root():
+    global sysfs_root
+
+    if sysfs_root is None:
+        sysfs_root = _damo_fs.dev_mount_point('sysfs')
+    return sysfs_root
+
+def get_kdamonds_dir():
+    '''Returns None if sysfs is not mounted'''
+    if get_sysfs_root() is None:
+        return None
+    return os.path.join(get_sysfs_root(), 'kernel/mm/damon/admin/kdamonds')
+
+def supported():
+    kdamonds_dir = get_kdamonds_dir()
+    if kdamonds_dir is None:
+        return False
+    return os.path.isdir(kdamonds_dir)
+
+def get_state_file_of(kdamond_idx):
+    return os.path.join(get_kdamonds_dir(), '%s' % kdamond_idx, 'state')
+
+def __write_state_file(kdamond_idxs, command):
+    'Return error'
+    err = None
+    for kdamond_idx in kdamond_idxs:
+        err = _damo_fs.write_file(get_state_file_of(kdamond_idx), command)
+        if err != None:
+            break
+    return err
+
+def turn_damon_on(kdamonds_idxs):
+    # In case of vaddr, too early monitoring shows unstable mapping changes.
+    # Give the process a time to have stable memory mapping.
+    time.sleep(0.5)
+    return __write_state_file(kdamonds_idxs, 'on')
+
+def turn_damon_off(kdamonds_idxs):
+    return __write_state_file(kdamonds_idxs, 'off')
+
+def is_kdamond_running(kdamond_idx):
+    content, err = _damo_fs.read_file(get_state_file_of(kdamond_idx))
+    if err != None:
+        print(err)
+        return False
+    return content.strip() == 'on'
+
+def get_refresh_ms_file_of(kdamond_idx):
+    return os.path.join(get_kdamonds_dir(), '%s' % kdamond_idx, 'refresh_ms')
+
+def refresh_ms_enabled(kdamond_idx):
+    filepath = get_refresh_ms_file_of(kdamond_idx)
+    if not os.path.isfile(filepath):
+        return False, None
+    content, err = _damo_fs.read_file(get_refresh_ms_file_of(kdamond_idx))
+    if err is not None:
+        return False, err
+    try:
+        enabled = int(content) != 0
+    except Exception as e:
+        return False, 'int(refresh_ms) failed (%s)!  kernel bug?' % e
+    return enabled, None
+
+def refresh_ms_disabled_kdidxs(kdamond_idxs):
+    idxs = []
+    for kdidx in kdamond_idxs:
+        unnecessary, err = refresh_ms_enabled(kdidx)
+        if err is not None:
+            return None, 'refresh_ms check fail (%s)' % err
+        if not unnecessary:
+            idxs.append(kdidx)
+    return idxs, None
+
+'Return error'
+def update_tuned_intervals(kdamond_idxs):
+    kdamond_idxs, err = refresh_ms_disabled_kdidxs(kdamond_idxs)
+    if err is not None:
+        return err
+    return __write_state_file(kdamond_idxs, 'update_tuned_intervals')
+
+'Return error'
+def update_schemes_stats(kdamond_idxs):
+    kdamond_idxs, err = refresh_ms_disabled_kdidxs(kdamond_idxs)
+    if err is not None:
+        return err
+    return __write_state_file(kdamond_idxs, 'update_schemes_stats')
+
+'Return error'
+def update_schemes_tried_bytes(kdamond_idxs):
+    err = __write_state_file(kdamond_idxs, 'update_schemes_tried_bytes')
+    if err != None:
+        err = '%s (maybe schemes_tried_regions_sz not supported?)' % err
+    return err
+
+'Return error'
+def update_schemes_tried_regions(kdamond_idxs):
+    return __write_state_file(kdamond_idxs, 'update_schemes_tried_regions')
+
+'Return error'
+def update_schemes_quota_effective_bytes(kdamond_idxs):
+    kdamond_idxs, err = refresh_ms_disabled_kdidxs(kdamond_idxs)
+    if err is not None:
+        return err
+    err = __write_state_file(kdamond_idxs, 'update_schemes_effective_quotas')
+    if err != None:
+        err = '%s (maybe schemes_effective_quotas not supported?)' % err
+    return err
+
+# for stage_kdamonds
+
+def write_filter_dir(dir_path, filter_):
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'type'), filter_.filter_type)
+    if err is not None:
+        # todo: make error message more detailed.
+        # anon/memcg are merged in 6.3-rc1
+        # addr/target are merged in 6.6-rc1
+        return err
+
+    if filter_.allow is True:
+        if os.path.isfile(os.path.join(dir_path, 'allow')):
+            err = _damo_fs.write_file(os.path.join(dir_path, 'allow'),
+                                      'Y' if filter_.allow else 'N')
+        # pass file has renamed to allow during development
+        elif os.path.isfile(os.path.join(dir_path, 'pass')):
+            err = _damo_fs.write_file(os.path.join(dir_path, 'pass'),
+                                      'Y' if filter_.allow else 'N')
+        else:
+            return 'kernel is not supporting allow_filter'
+        if err is not None:
+            return err
+
+    if filter_.memcg_path is not None:
+        err = _damo_fs.write_file(
+                os.path.join(dir_path, 'memcg_path'), filter_.memcg_path)
+        if err is not None:
+            return err
+
+    if filter_.hugepage_size is not None:
+        err = _damo_fs.write_file(
+                os.path.join(dir_path, 'min'),
+                '%d' % filter_.hugepage_size[0])
+        if err is not None:
+            return err
+
+        err = _damo_fs.write_file(
+                os.path.join(dir_path, 'max'),
+                '%d' % filter_.hugepage_size[1])
+        if err is not None:
+            return err
+
+    if filter_.address_range is not None:
+        err = _damo_fs.write_file(
+                os.path.join(dir_path, 'addr_start'),
+                '%d' % filter_.address_range.start)
+        if err is not None:
+            return err
+
+        err = _damo_fs.write_file(
+                os.path.join(dir_path, 'addr_end'),
+                '%d' % filter_.address_range.end)
+        if err is not None:
+            return err
+
+    if filter_.damon_target_idx is not None:
+        err = _damo_fs.write_file(
+                os.path.join(dir_path, 'damon_target_idx'),
+                '%d' % filter_.damon_target_idx)
+        if err is not None:
+            return err
+
+    return _damo_fs.write_file(os.path.join(dir_path, 'matching'),
+                               'Y' if filter_.matching else 'N')
+
+def ensure_nr_file_for(file_path, list_):
+    content, err = _damo_fs.read_file(file_path)
+    if err is not None:
+        return err
+    current_nr = int(content)
+    desired_nr = len(list_)
+    if current_nr == desired_nr:
+        return None
+    return _damo_fs.write_file(file_path, '%d' % desired_nr)
+
+def write_filters_dir(dir_path, filters):
+    # filters merged in v6.3-rc1
+    if not os.path.isdir(dir_path):
+        if len(filters) == 0:
+            return None
+        return 'the kernel is not supporting filters'
+
+    err = ensure_nr_file_for(os.path.join(dir_path, 'nr_filters'), filters)
+    if err is not None:
+        return err
+
+    for idx, filter_ in enumerate(filters):
+        err = write_filter_dir(os.path.join(dir_path, '%d' % idx), filter_)
+        if err is not None:
+            return err
+    return None
+
+def is_core_filter(damos_filter):
+    return damos_filter.filter_type in ['addr', 'target']
+
+def write_core_ops_filters_dirs(scheme_dir_path, filters):
+    core_filters = [f for f in filters if is_core_filter(f)]
+    err = write_filters_dir(os.path.join(scheme_dir_path, 'core_filters'),
+                            core_filters)
+    if err is not None:
+        return err
+
+    ops_filters = [f for f in filters if not is_core_filter(f)]
+    err = write_filters_dir(os.path.join(scheme_dir_path, 'ops_filters'),
+                            ops_filters)
+    if err is not None:
+        return err
+
+def write_filters_dirs(scheme_dir_path, filters):
+    if os.path.isdir(os.path.join(scheme_dir_path, 'core_filters')):
+        return write_core_ops_filters_dirs(scheme_dir_path, filters)
+    return write_filters_dir(os.path.join(scheme_dir_path, 'filters'), filters)
+
+def write_watermarks_dir(dir_path, wmarks):
+    if wmarks is None:
+        # TODO: ensure wmarks is not None
+        return None
+    err = _damo_fs.write_file(os.path.join(dir_path, 'metric'), wmarks.metric)
+    if err is not None:
+        return err
+
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'interval_us'), '%d' % wmarks.interval_us)
+    if err is not None:
+        return err
+
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'high'), '%d' % wmarks.high_permil)
+    if err is not None:
+        return err
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'mid'), '%d' % wmarks.mid_permil)
+    if err is not None:
+        return err
+    return _damo_fs.write_file(
+            os.path.join(dir_path, 'low'), '%d' % wmarks.low_permil)
+
+def write_quota_goal_dir(dir_path, goal):
+    # goal metric is wip as of 6.8-rc4 days.
+    if (not os.path.isfile(os.path.join(dir_path, 'target_metric')) and
+        goal.metric != 'user_input'):
+        return 'the kernel is not supporting quota goal metric'
+
+    if os.path.isfile(os.path.join(dir_path, 'target_metric')):
+        err = _damo_fs.write_file(os.path.join(dir_path, 'target_metric'),
+                                  '%s' % goal.metric)
+        if err is not None:
+            return err
+
+    if goal.has_nid():
+        err = _damo_fs.write_file(os.path.join(dir_path, 'nid'), '%d' % goal.nid)
+        if err is not None:
+            return err
+
+    if goal.has_memcg_path():
+        err = _damo_fs.write_file(
+                os.path.join(dir_path, 'path'), '%s' % goal.memcg_path)
+        if err is not None:
+            return err
+
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'target_value'),
+            '%d' % goal.target_value)
+    if err is not None:
+        return err
+
+    return _damo_fs.write_file(
+            os.path.join(dir_path, 'current_value'),
+            '%d' % goal.current_value)
+
+def write_quota_goals_dir(dir_path, goals):
+    # goals dir has merged in 6.8-rc1
+    if not os.path.isdir(dir_path):
+        if len(goals) == 0:
+            return None
+        return 'the kernel is not supporting schemes quota goals'
+
+    err = ensure_nr_file_for(os.path.join(dir_path, 'nr_goals'), goals)
+    if err is not None:
+        return err
+
+    for idx, goal in enumerate(goals):
+        err = write_quota_goal_dir(os.path.join(dir_path, '%d' % idx), goal)
+        if err is not None:
+            return err
+    return None
+
+def write_quota_weights_dir(dir_path, quotas):
+    err = _damo_fs.write_file(os.path.join(dir_path, 'sz_permil'),
+                              '%d' % quotas.weight_sz_permil)
+    if err is not None:
+        return err
+
+    err = _damo_fs.write_file(os.path.join(dir_path, 'nr_accesses_permil'),
+                              '%d' % quotas.weight_nr_accesses_permil)
+    if err is not None:
+        return err
+
+    return _damo_fs.write_file(os.path.join(dir_path, 'age_permil'),
+                              '%d' % quotas.weight_age_permil)
+
+def write_quota_fail_charge_ratio_files(dir_path, quotas):
+    num_file = os.path.join(dir_path, 'fail_charge_num')
+    if not os.path.isfile(num_file):
+        return None
+    err = _damo_fs.write_file(num_file, '%d' % quotas.fail_charge_num)
+    if err is not None:
+        return err
+
+    denom_file = os.path.join(dir_path, 'fail_charge_denom')
+    return _damo_fs.write_file(denom_file, '%d' % quotas.fail_charge_denom)
+
+def write_quotas_dir(dir_path, quotas):
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'ms'), '%d' % quotas.time_ms)
+    if err is not None:
+        return err
+
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'bytes'), '%d' % quotas.sz_bytes)
+    if err is not None:
+        return err
+
+    err = _damo_fs.write_file(os.path.join(dir_path, 'reset_interval_ms'),
+                              '%d' % quotas.reset_interval_ms)
+    if err is not None:
+        return err
+
+    err = write_quota_weights_dir(os.path.join(dir_path, 'weights'), quotas)
+    if err is not None:
+        return err
+
+    err = write_quota_fail_charge_ratio_files(dir_path, quotas)
+    if err is not None:
+        return err
+
+    err = write_quota_goals_dir(os.path.join(dir_path, 'goals'), quotas.goals)
+    if err is not None:
+        return err
+
+    goal_tuner_file = os.path.join(dir_path, 'goal_tuner')
+    if os.path.isfile(goal_tuner_file):
+        return _damo_fs.write_file(goal_tuner_file, quotas.goal_tuner)
+
+def write_scheme_dests_dir(dir_path, dests):
+    if len(dests) == 0:
+        return None
+    err = ensure_nr_file_for(os.path.join(dir_path, 'nr_dests'), dests)
+    if err is not None:
+        return err
+
+    for idx, dest in enumerate(dests):
+        err = _damo_fs.write_file(os.path.join(dir_path, '%d' % idx, 'id'),
+                                  '%d' % dest.id)
+        if err is not None:
+            return err
+        err = _damo_fs.write_file(os.path.join(dir_path, '%d' % idx, 'weight'),
+                                  '%d' % dest.weight)
+        if err is not None:
+            return err
+
+def write_ulong(file_path, val):
+    return _damo_fs.write_file(
+            file_path, '%d' % min(val, _damo_fmt_str.ulong_max))
+
+def write_scheme_access_pattern_dir(dir_path, pattern):
+    err = write_ulong(
+            os.path.join(dir_path, 'sz', 'min'), pattern.sz_bytes[0])
+    if err is not None:
+        return err
+
+    err = write_ulong(
+            os.path.join(dir_path, 'sz', 'max'), pattern.sz_bytes[1])
+    if err is not None:
+        return err
+
+    err = write_ulong(os.path.join(dir_path, 'nr_accesses', 'min'),
+                      pattern.nr_acc_min_max[0].samples)
+    if err is not None:
+        return err
+
+    err = write_ulong(os.path.join(dir_path, 'nr_accesses', 'max'),
+                      pattern.nr_acc_min_max[1].samples)
+    if err is not None:
+        return err
+
+    err = write_ulong(os.path.join(dir_path, 'age', 'min'),
+                      pattern.age_min_max[0].aggr_intervals)
+    if err is not None:
+        return err
+    return write_ulong(os.path.join(dir_path, 'age', 'max'),
+                       pattern.age_min_max[1].aggr_intervals)
+
+def write_scheme_dir(dir_path, scheme):
+    err = write_scheme_access_pattern_dir(
+            os.path.join(dir_path, 'access_pattern'), scheme.access_pattern)
+    if err is not None:
+        return err
+
+    err = _damo_fs.write_file(os.path.join(dir_path, 'action'), scheme.action)
+    if err is not None:
+        return err
+
+    err = write_scheme_dests_dir(
+            os.path.join(dir_path, 'dests'), scheme.dests)
+    if err is not None:
+        return err
+
+    err = write_quotas_dir(os.path.join(dir_path, 'quotas'), scheme.quotas)
+    if err is not None:
+        return err
+
+    err = write_watermarks_dir(
+            os.path.join(dir_path, 'watermarks'), scheme.watermarks)
+    if err is not None:
+        return err
+
+    if scheme.target_nid is not None:
+        err = _damo_fs.write_file(os.path.join(dir_path,'target_nid'), '%s' % scheme.target_nid)
+        if err is not None:
+            return err
+
+    err = write_filters_dirs(dir_path, scheme.filters)
+    if err is not None:
+        return err
+
+    apply_interval_file = os.path.join(dir_path, 'apply_interval_us')
+    # schemes apply interval is merged in v6.7-rc1
+    if os.path.isfile(apply_interval_file):
+        err = _damo_fs.write_file(apply_interval_file,
+                                  '%d' % scheme.apply_interval_us)
+        if err is not None:
+            return err
+    else:
+        if scheme.apply_interval_us:
+            return 'the kernel is not supporting schemes apply interval'
+
+    max_nr_snapshots_file = os.path.join(dir_path, 'stats', 'max_nr_snapshots')
+    if os.path.isfile(max_nr_snapshots_file):
+        err = _damo_fs.write_file(max_nr_snapshots_file,
+                                  '%d' % scheme.stats.max_nr_snapshots)
+        if err is not None:
+            return err
+    else:
+        if scheme.stats.max_nr_snapshots:
+            return 'the kernel is not supporting max_nr_snapshots'
+
+    return None
+
+def write_schemes_dir(dir_path, schemes):
+    err = ensure_nr_file_for(os.path.join(dir_path, 'nr_schemes'), schemes)
+    if err is not None:
+        return err
+
+    for idx, scheme in enumerate(schemes):
+        err = write_scheme_dir(os.path.join(dir_path, '%d' % idx), scheme)
+        if err is not None:
+            return err
+
+def write_target_region_dir(dir_path, region):
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'start'), '%d' % region.start)
+    if err is not None:
+        return err
+
+    return _damo_fs.write_file(
+            os.path.join(dir_path, 'end'), '%d' % region.end)
+
+def write_target_regions_dir(dir_path, regions):
+    err = ensure_nr_file_for(os.path.join(dir_path, 'nr_regions'), regions)
+    if err is not None:
+        return err
+
+    for idx, region in enumerate(regions):
+        err = write_target_region_dir(
+                os.path.join(dir_path, '%d' % idx), region)
+        if err is not None:
+            return err
+    return None
+
+def write_target_dir(dir_path, target):
+    if target.pid is not None:
+        err = _damo_fs.write_file(
+                os.path.join(dir_path, 'pid_target'), '%s' % target.pid)
+        if err is not None:
+            return err
+
+    obsolete_file = os.path.join(dir_path, 'obsolete_target')
+    if os.path.isfile(obsolete_file):
+        err = _damo_fs.write_file(
+                obsolete_file, '1' if target.obsolete else '0')
+        if err is not None:
+            return err
+    elif target.obsolete:
+        return 'obsolete_target unsupported'
+
+    return write_target_regions_dir(
+            os.path.join(dir_path, 'regions'), target.regions)
+
+
+def write_targets_dir(dir_path, targets):
+    err = ensure_nr_file_for(os.path.join(dir_path, 'nr_targets'), targets)
+    if err is not None:
+        return err
+
+    for idx, target in enumerate(targets):
+        err = write_target_dir(os.path.join(dir_path, '%d' % idx), target)
+        if err is not None:
+            return err
+    return None
+
+def write_monitoring_intervals_goal_dir(dir_path, goal):
+    err = _damo_fs.write_file(os.path.join(dir_path, 'access_bp'), '%d' %
+                              goal.access_bp)
+    if err is not None:
+        return err
+    err = _damo_fs.write_file(os.path.join(dir_path, 'aggrs'), '%d' %
+                              goal.aggrs)
+    if err is not None:
+        return err
+    err = _damo_fs.write_file(os.path.join(dir_path, 'min_sample_us'), '%d' %
+                              goal.min_sample_us)
+    if err is not None:
+        return err
+    err = _damo_fs.write_file(os.path.join(dir_path, 'max_sample_us'), '%d' %
+                              goal.max_sample_us)
+    if err is not None:
+        return err
+
+def write_ops_attrs_dir(dir_path, ops_attrs):
+    if not os.path.isdir(dir_path):
+        return None
+    err = _damo_fs.write_file(os.path.join(dir_path, 'use_reports'),
+                               'Y' if ops_attrs.use_reports else 'N')
+    if err is not None:
+        return err
+    err = _damo_fs.write_file(os.path.join(dir_path, 'write_only'),
+                               'Y' if ops_attrs.write_only else 'N')
+    if err is not None:
+        return err
+    err = _damo_fs.write_file(os.path.join(dir_path, 'cpus'), ops_attrs.cpus)
+    if err is not None:
+        return err
+    err = _damo_fs.write_file(os.path.join(dir_path, 'tids'), ops_attrs.tids)
+    if err is not None:
+        return err
+
+def write_probe_filter_dir(dir_path, filter):
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'type'), filter.filter_type)
+    if err is not None:
+        return err
+    err = _damo_fs.write_file(os.path.join(dir_path, 'matching'),
+                              'Y' if filter.matching else 'N')
+    if err is not None:
+        return err
+    err = _damo_fs.write_file(os.path.join(dir_path, 'allow'),
+                              'Y' if filter.allow else 'N')
+    if err is not None:
+        return err
+    if filter.filter_type == 'memcg':
+        err = _damo_fs.write_file(os.path.join(dir_path, 'path'), filter.path)
+        if err is not None:
+            return err
+    return None
+
+def write_probe_dir(dir_path, probe):
+    filters_dir = os.path.join(dir_path, 'filters')
+    err = ensure_nr_file_for(os.path.join(filters_dir, 'nr_filters'),
+                             probe.filters)
+    if err is not None:
+        return err
+
+    for idx, filter in enumerate(probe.filters):
+        err = write_probe_filter_dir(
+                os.path.join(filters_dir, '%d' % idx), filter)
+        if err is not None:
+            return err
+    return None
+
+def write_probes_dir(dir_path, probes):
+    if not os.path.isdir(dir_path):
+        return None
+    err = ensure_nr_file_for(os.path.join(dir_path, 'nr_probes'), probes)
+    if err is not None:
+        return err
+
+    for idx, probe in enumerate(probes):
+        err = write_probe_dir(os.path.join(dir_path, '%d' % idx), probe)
+        if err is not None:
+            return err
+    return None
+
+def write_sample_filter_dir(dir_path, sample_filter):
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'type'), sample_filter.filter_type)
+    if err is not None:
+        return err
+
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'matching'),
+            'Y' if sample_filter.matching else 'N')
+    if err is not None:
+        return err
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'allow'),
+            'Y' if sample_filter.allow else 'N')
+    if err is not None:
+        return err
+
+    if sample_filter.filter_type == _damon.damon_filter_type_cpumask:
+        err = _damo_fs.write_file(
+                os.path.join(dir_path, 'cpumask'), sample_filter.cpumask)
+        if err is not None:
+            return err
+    elif sample_filter.filter_type == _damon.damon_filter_type_threads:
+        err = _damo_fs.write_file(
+                os.path.join(dir_path, 'tid_arr'), sample_filter.tid_arr)
+        if err is not None:
+            return err
+    return None
+
+def write_sample_filters_dir(dir_path, filters):
+    if not os.path.isdir(dir_path):
+        if len(filters) == 0:
+            return None
+        return 'the kernel is not supporting sample filters'
+
+    err = ensure_nr_file_for(os.path.join(dir_path, 'nr_filters'), filters)
+    if err is not None:
+        return err
+
+    for idx, sample_filter in enumerate(filters):
+        err = write_sample_filter_dir(
+                os.path.join(dir_path, '%d' % idx), sample_filter)
+        if err is not None:
+            return err
+    return None
+
+    err = _damo_fs.write_file
+
+def write_sample_control_dir(dir_path, sample_control):
+    if not os.path.isdir(dir_path):
+        return None
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'primitives', 'page_table'),
+            'Y' if sample_control.primitives_enabled.page_table else 'N')
+    if err is not None:
+        return err
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'primitives', 'page_fault'),
+            'Y' if sample_control.primitives_enabled.page_fault else 'N')
+    if err is not None:
+        return err
+    return write_sample_filters_dir(
+            os.path.join(dir_path, 'filters'), sample_control.sample_filters)
+
+def write_monitoring_attrs_dir(dir_path, context):
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'intervals', 'sample_us'),
+            '%d' % context.intervals.sample)
+    if err is not None:
+        return err
+
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'intervals', 'aggr_us'),
+            '%d' % context.intervals.aggr)
+    if err is not None:
+        return err
+
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'intervals', 'update_us'),
+            '%d' % context.intervals.ops_update)
+    if err is not None:
+        return err
+
+    intervals_goal_path = os.path.join(dir_path, 'intervals', 'intervals_goal')
+    if os.path.isdir(intervals_goal_path):
+        err = write_monitoring_intervals_goal_dir(
+                intervals_goal_path, context.intervals.intervals_goal)
+        if err is not None:
+            return err
+
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'nr_regions', 'min'),
+            '%d' % context.nr_regions.minimum)
+    if err is not None:
+        return err
+
+    err = _damo_fs.write_file(
+            os.path.join(dir_path, 'nr_regions', 'max'),
+            '%d' % context.nr_regions.maximum)
+    if err is not None:
+        return err
+
+    err = write_probes_dir(
+            os.path.join(dir_path, 'probes'), context.probes)
+    if err is not None:
+        return err
+
+    return write_sample_control_dir(
+            os.path.join(dir_path, 'sample'), context.sample_control)
+
+def write_pause(pause_file, pause_val):
+    if not os.path.isfile(pause_file):
+        return None
+    return _damo_fs.write_file(pause_file, 'Y' if pause_val else 'N')
+
+def write_addr_unit(addr_unit_file, addr_unit_val):
+    if not os.path.isfile(addr_unit_file):
+        return None
+    return _damo_fs.write_file(addr_unit_file, '%d' % addr_unit_val)
+
+def write_context_dir(dir_path, context):
+    err = _damo_fs.write_file(os.path.join(dir_path, 'operations'),
+                              context.ops)
+    if err is not None:
+        return err
+
+    err = write_ops_attrs_dir(
+            os.path.join(dir_path, 'operations_attrs'), context.ops_attrs)
+    if err is not None:
+        return err
+
+    err = write_monitoring_attrs_dir(
+            os.path.join(dir_path, 'monitoring_attrs'), context)
+    if err is not None:
+        return err
+
+    err = write_pause(os.path.join(dir_path, 'pause'), context.pause)
+    if err is not None:
+        return err
+
+    err = write_addr_unit(os.path.join(dir_path, 'addr_unit'),
+                          context.addr_unit)
+    if err is not None:
+        return err
+
+    err = write_targets_dir(
+            os.path.join(dir_path, 'targets'), context.targets)
+    if err is not None:
+        return err
+
+    for scheme in context.schemes:
+        scheme.access_pattern = scheme.access_pattern.converted_for_units(
+                _damon.unit_samples, _damon.unit_aggr_intervals,
+                context.intervals)
+    return write_schemes_dir(
+            os.path.join(dir_path, 'schemes'), context.schemes)
+
+def write_contexts_dir(dir_path, contexts):
+    err = ensure_nr_file_for(os.path.join(dir_path, 'nr_contexts'), contexts)
+    if err is not None:
+        return err
+
+    for idx, context in enumerate(contexts):
+        err = write_context_dir(
+                os.path.join(dir_path, '%d' % idx), context)
+        if err is not None:
+            return err
+
+def write_kdamond_dir(dir_path, kdamond):
+    refresh_ms_path = os.path.join(dir_path, 'refresh_ms')
+    if os.path.isfile(refresh_ms_path):
+        err = _damo_fs.write_file(refresh_ms_path, '%d' % kdamond.refresh_ms)
+        if err is not None:
+            return err
+
+    err = write_contexts_dir(
+            os.path.join(dir_path, 'contexts'), kdamond.contexts)
+    if err is not None:
+        return err
+
+def write_kdamonds_dir(dir_path, kdamonds):
+    err = ensure_nr_file_for(os.path.join(dir_path, 'nr_kdamonds'), kdamonds)
+    if err:
+        return err
+
+    for idx, kdamond in enumerate(kdamonds):
+        err = write_kdamond_dir(os.path.join(dir_path, '%d' % idx), kdamond)
+        if err is not None:
+            return err
+
+def stage_kdamonds(kdamonds):
+    """Write DAMON parameters for kdamonds to the sysfs files.
+
+    Args:
+        kdamonds: A list of _damon.Kdamond objects.
+
+    Returns:
+        None for success, an error string if failed.
+    """
+    # Assume caller checked supported()
+    return write_kdamonds_dir(get_kdamonds_dir(), kdamonds)
+
+def stage_kdamonds_targets(kdamonds):
+    kdamonds_dir_path = get_kdamonds_dir()
+
+    err = ensure_nr_file_for(os.path.join(kdamonds_dir_path, 'nr_kdamonds'), kdamonds)
+    if err:
+        return err
+
+    for k_idx, kdamond in enumerate(kdamonds):
+        contexts_dir_path = os.path.join(kdamonds_dir_path, '%d' % k_idx, 'contexts')
+        contexts = kdamond.contexts
+
+        err = ensure_nr_file_for(os.path.join(contexts_dir_path, 'nr_contexts'), contexts)
+        if err:
+            return err
+
+        for c_idx, context in enumerate(contexts):
+            targets_dir_path = os.path.join(contexts_dir_path, '%d' % c_idx, 'targets')
+            err = write_targets_dir(targets_dir_path, context.targets)
+            if err:
+                return err
+
+    return None
+
+# for current_kdamonds()
+
+def numbered_dirs_content(files_content, nr_filename):
+    nr_dirs = int(files_content[nr_filename])
+    number_dirs = []
+    for i in range(nr_dirs):
+        number_dirs.append(files_content['%d' % i])
+    return number_dirs
+
+def number_sorted_dirs(files_content):
+    number_dirs = {}
+    for filename, content in files_content.items():
+        try:
+            nr = int(filename)
+        except:
+            continue
+        if type(content) != dict:
+            continue
+        number_dirs[nr] = content
+    sorted_numbers = sorted(number_dirs.keys())
+    return [number_dirs[nr] for nr in sorted_numbers]
+
+def files_content_to_access_pattern(files_content):
+    return _damon.DamosAccessPattern(
+            [int(files_content['sz']['min']),
+                int(files_content['sz']['max'])],
+            [int(files_content['nr_accesses']['min']),
+                int(files_content['nr_accesses']['max'])],
+            _damon.unit_samples, # nr_accesses_unit
+            [int(files_content['age']['min']),
+                int(files_content['age']['max'])],
+            _damon.unit_aggr_intervals) # age_unit
+
+def files_content_to_quota_goals(files_content):
+    goals = []
+    for goal_kv in number_sorted_dirs(files_content):
+        if 'target_metric' in goal_kv:
+            if 'path' in goal_kv:
+                memcg_path = goal_kv['path'].strip()
+            else:
+                memcg_path = None
+            goals.append(
+                    _damon.DamosQuotaGoal(
+                        metric=goal_kv['target_metric'].strip(),
+                        nid=goal_kv['nid'] if 'nid' in goal_kv else None,
+                        memcg_path=memcg_path,
+                        target_value=goal_kv['target_value'],
+                        current_value=goal_kv['current_value']))
+        else:
+            goals.append(
+                    _damon.DamosQuotaGoal(
+                        target_value=goal_kv['target_value'],
+                        current_value=goal_kv['current_value']))
+    return goals
+
+def files_content_to_quotas(files_content):
+    fail_charge_num = files_content.get('fail_charge_num', 0)
+    fail_charge_denom = files_content.get('fail_charge_denom', 0)
+    return _damon.DamosQuotas(
+            int(files_content['ms']),
+            int(files_content['bytes']),
+            int(files_content['reset_interval_ms']),
+            [int(files_content['weights']['sz_permil']),
+                int(files_content['weights']['nr_accesses_permil']),
+                int(files_content['weights']['age_permil'])],
+            files_content_to_quota_goals(files_content['goals'])
+            if 'goals' in files_content else [],
+            goal_tuner=files_content.get('goal_tuner', None),
+            effective_sz_bytes=int(files_content['effective_bytes'])
+            if 'effective_bytes' in files_content else 0,
+            fail_charge_num=fail_charge_num,
+            fail_charge_denom=fail_charge_denom)
+
+def files_content_to_watermarks(files_content):
+    return _damon.DamosWatermarks(
+            files_content['metric'].strip(),
+            int(files_content['interval_us']),
+            int(files_content['high']),
+            int(files_content['mid']),
+            int(files_content['low']))
+
+def files_content_to_damos_filter(files_content):
+    allow = False
+    if 'allow' in files_content:
+        allow = files_content['allow'].strip()
+    # the file name has changed from pass to allow after v1 patch
+    elif 'pass' in files_content:
+        allow = files_content['pass'].strip()
+
+    hugepage_size=None
+    if 'min' in files_content and 'max' in files_content:
+        hugepage_size = [_damo_fmt_str.text_to_bytes(x)
+                         for x in [files_content['min'], files_content['max']]]
+
+    return _damon.DamosFilter(
+        files_content['type'].strip(),
+        files_content['matching'].strip(),
+        allow,
+        files_content['memcg_path'].strip(),
+        _damon.DamonRegion(files_content['addr_start'].strip(),
+                           files_content['addr_end'].strip())
+        if 'addr_start' in files_content and 'addr_end' in files_content
+        else None,
+        files_content['damon_target_idx']
+        if 'damon_target_idx' in files_content else None,
+        hugepage_size=hugepage_size)
+
+def files_content_to_damos_filters(scheme_files_content):
+    filters = []
+    if 'core_filters' in scheme_files_content:
+        filters += [files_content_to_damos_filter(filter_kv)
+                    for filter_kv in numbered_dirs_content(
+                        scheme_files_content['core_filters'], 'nr_filters')]
+        filters += [files_content_to_damos_filter(filter_kv)
+                    for filter_kv in numbered_dirs_content(
+                        scheme_files_content['ops_filters'], 'nr_filters')]
+    filters += [files_content_to_damos_filter(filter_kv)
+                for filter_kv in numbered_dirs_content(
+                    scheme_files_content['filters'], 'nr_filters')]
+    return filters
+
+def files_content_to_damos_stats(files_content):
+    if 'nr_snapshots' in files_content:
+        nr_snapshots = int(files_content['nr_snapshots'])
+    else:
+        nr_snapshots = 0
+    if 'max_nr_snapshots' in files_content:
+        max_nr_snapshots = int(files_content['max_nr_snapshots'])
+    else:
+        max_nr_snapshots = 0
+    return _damon.DamosStats(
+            int(files_content['nr_tried']),
+            int(files_content['sz_tried']),
+            int(files_content['nr_applied']),
+            int(files_content['sz_applied']),
+            int(files_content['sz_ops_filter_passed']
+                if 'sz_ops_filter_passed' in files_content else 0),
+            int(files_content['qt_exceeds']),
+            nr_snapshots=nr_snapshots, max_nr_snapshots=max_nr_snapshots)
+
+def files_content_to_probe_hits(files_content):
+    hits = []
+    for kv in number_sorted_dirs(files_content):
+        hits.append(int(kv['hits']))
+    return hits
+
+def files_content_to_damos_tried_regions(files_content):
+    regions = []
+    for kv in number_sorted_dirs(files_content):
+        if 'probes' in kv:
+            probe_hits = files_content_to_probe_hits(kv['probes'])
+        else:
+            probe_hits = []
+        regions.append(
+                _damon.DamonRegion(
+                    int(kv['start']), int(kv['end']),
+                    int(kv['nr_accesses']), _damon.unit_samples,
+                    int(kv['age']), _damon.unit_aggr_intervals,
+                    int(kv['sz_filter_passed'])
+                    if 'sz_filter_passed' in kv else None,
+                    probe_hits=probe_hits))
+    return regions
+
+def files_content_to_damos_dest(files_content):
+    return _damon.DamosDest(
+            id=int(files_content['id']), weight=int(files_content['weight']))
+
+def files_content_to_scheme(files_content):
+    dests = []
+    if 'dests' in files_content:
+        dests = [files_content_to_damos_dest(content)
+            for content in numbered_dirs_content(
+                files_content['dests'], 'nr_dests')]
+    return _damon.Damos(
+            files_content_to_access_pattern(files_content['access_pattern']),
+            files_content['action'].strip(),
+            files_content['target_nid'].strip()
+                if 'target_nid' in files_content else None,
+            files_content['apply_interval_us'].strip()
+                if 'apply_interval_us' in files_content else None,
+            files_content_to_quotas(files_content['quotas']),
+            files_content_to_watermarks(files_content['watermarks']),
+            files_content_to_damos_filters(files_content)
+                if 'filters' in files_content else [],
+            files_content_to_damos_stats(files_content['stats']),
+            files_content_to_damos_tried_regions(
+                files_content['tried_regions'])
+                if 'tried_regions' in files_content else [],
+            files_content['tried_regions']['total_bytes']
+                if 'tried_regions' in files_content and
+                    'total_bytes' in files_content['tried_regions'] else None,
+            dests=dests)
+
+def files_content_to_regions(files_content):
+    return [_damon.DamonRegion(
+            int(kv['start']), int(kv['end']))
+            for kv in numbered_dirs_content(files_content, 'nr_regions')]
+
+def files_content_to_target(files_content):
+    try:
+        pid = int(files_content['pid_target'])
+    except:
+        pid = None
+    obsolete = False
+    if 'obsolete_target' in files_content:
+        obsolete = files_content['obsolete_target'].strip()
+    regions = files_content_to_regions(files_content['regions'])
+    return _damon.DamonTarget(pid, regions, obsolete=obsolete)
+
+def files_content_to_damon_filter(files_content):
+    path = None
+    if 'path' in files_content:
+        files_content.get('path').strip()
+    return _damon.DamonFilter(
+        filter_type=files_content['type'].strip(),
+        matching=files_content['matching'].strip(),
+        allow=files_content['allow'].strip(), path=path)
+
+def files_content_to_probe(files_content):
+    filters_content = files_content['filters']
+    filters = []
+    for kv in number_sorted_dirs(filters_content):
+        filter = files_content_to_damon_filter(kv)
+        filters.append(filter)
+    return _damon.DamonProbe(filters=filters)
+
+def files_content_to_probes(files_content):
+    probes = []
+    for kv in number_sorted_dirs(files_content):
+        probes.append(files_content_to_probe(kv))
+    return probes
+
+def files_content_to_sample_filter(files_content):
+    filter_type = files_content['type'].strip()
+    matching = files_content['matching'].strip()
+    allow = files_content['matching'].strip()
+    cpumask = files_content['cpumask'].strip()
+    tid_arr = files_content['tid_arr'].strip()
+    return _damon.DamonSampleFilter(
+            filter_type=filter_type, matching=matching, allow=allow,
+            cpumask=cpumask, tid_arr=tid_arr)
+
+def files_content_to_sample_filters(files_content):
+    return [files_content_to_sample_filter(filter_kv)
+                for filter_kv in numbered_dirs_content(
+                    files_content, 'nr_filters')]
+
+def files_content_to_sample_control(files_content):
+    page_table = files_content['primitives']['page_table'].strip()
+    page_fault = files_content['primitives']['page_fault'].strip()
+    primitives_enabled = _damon.DamonPrimitivesEnabled(
+            page_table=page_table, page_fault=page_fault)
+    sample_filters = files_content_to_sample_filters(files_content['filters'])
+    return _damon.DamonSampleControl(
+            primitives_enabled=primitives_enabled,
+            sample_filters=sample_filters)
+
+def files_content_to_ops_attrs(files_content):
+    use_reports = files_content['use_reports'].strip()
+    write_only = files_content['write_only'].strip()
+    cpus = files_content['cpus'].strip()
+    tids = files_content['tids'].strip()
+    return _damon.OpsAttrs(use_reports=use_reports, write_only=write_only,
+                           cpus=cpus, tids=tids)
+
+def files_content_to_context(files_content):
+    mon_attrs_content = files_content['monitoring_attrs']
+    intervals_content = mon_attrs_content['intervals']
+    if 'intervals_goal' in intervals_content:
+        kvpairs = intervals_content['intervals_goal']
+        intervals_goal = _damon.DamonIntervalsGoal(
+                int(kvpairs['access_bp']), int(kvpairs['aggrs']),
+                int(kvpairs['min_sample_us']), int(kvpairs['max_sample_us']))
+    else:
+        intervals_goal = _damon.DamonIntervalsGoal()
+    intervals = _damon.DamonIntervals(
+            int(intervals_content['sample_us']),
+            int(intervals_content['aggr_us']),
+            int(intervals_content['update_us']),
+            intervals_goal)
+    nr_regions_content = mon_attrs_content['nr_regions']
+    nr_regions = _damon.DamonNrRegionsRange(
+            int(nr_regions_content['min']),
+            int(nr_regions_content['max']))
+    if 'probes' in files_content['monitoring_attrs']:
+        probes = files_content_to_probes(
+                files_content['monitoring_attrs']['probes'])
+    else:
+        probes = []
+    if 'sample' in mon_attrs_content:
+        sample_control = files_content_to_sample_control(
+                mon_attrs_content['sample'])
+    else:
+        sample_control = _damon.DamonSampleControl()
+    ops = files_content['operations'].strip()
+    if 'operations_attrs' in files_content:
+        ops_attrs = files_content_to_ops_attrs(
+                files_content['operations_attrs'])
+    else:
+        ops_attrs = _damon.OpsAttrs()
+    if 'pause' in files_content:
+        pause = files_content['pause'].strip()
+    else:
+        pause = False
+    addr_unit = files_content.get('addr_unit', 1)
+
+    targets_content = files_content['targets']
+    targets = [files_content_to_target(content)
+            for content in numbered_dirs_content(
+                targets_content, 'nr_targets')]
+
+    schemes_content = files_content['schemes']
+    schemes = [files_content_to_scheme(content)
+            for content in numbered_dirs_content(
+                schemes_content, 'nr_schemes')]
+
+    return _damon.DamonCtx(ops, targets, intervals, nr_regions, schemes,
+                           ops_attrs=ops_attrs, sample_control=sample_control,
+                           pause=pause, addr_unit=addr_unit, probes=probes)
+
+def files_content_to_kdamond(files_content):
+    contexts_content = files_content['contexts']
+    contexts = [files_content_to_context(content)
+            for content in numbered_dirs_content(
+                contexts_content, 'nr_contexts')]
+    state = files_content['state'].strip()
+    pid = files_content['pid'].strip()
+    if 'refresh_ms' in files_content:
+        refresh_ms = files_content['refresh_ms'].strip()
+    else:
+        refresh_ms = 0
+    return _damon.Kdamond(state, pid, refresh_ms=refresh_ms, contexts=contexts)
+
+def files_content_to_kdamonds(files_contents):
+    return [files_content_to_kdamond(content)
+            for content in numbered_dirs_content(
+                files_contents, 'nr_kdamonds')]
+
+def current_kdamonds():
+    # Assume caller checked supported()
+    return files_content_to_kdamonds(_damo_fs.read_files(get_kdamonds_dir()))
+
+def get_nr_kdamonds_file():
+    return os.path.join(get_kdamonds_dir(), 'nr_kdamonds')
+
+def nr_kdamonds():
+    nr_kdamonds, err = _damo_fs.read_file(get_nr_kdamonds_file())
+    if err != None:
+        raise Exception('nr_kdamonds_file read fail (%s)' % err)
+    return int(nr_kdamonds)
+
+def commit_staged(kdamond_idxs):
+    for kdamond_idx in kdamond_idxs:
+        err = _damo_fs.write_file(get_state_file_of(kdamond_idx), 'commit')
+        if err != None:
+            return err
+    return None
+
+def commit_quota_goals(kdamond_idxs):
+    for kdamond_idx in kdamond_idxs:
+        err = _damo_fs.write_file(get_state_file_of(kdamond_idx),
+                'commit_schemes_quota_goals')
+        if err != None:
+            return err
+
+# features
+
+# sysfs was merged in v5.18-rc1
+features_sysfs_support_from_begining = [
+        'sysfs/schemes',
+        'sysfs/init_regions',
+        'sysfs/vaddr',
+        'sysfs/paddr',
+        'sysfs/schemes_size_quota',
+        'sysfs/schemes_time_quota',
+        'sysfs/schemes_prioritization',
+        'sysfs/schemes_wmarks',
+        'sysfs/schemes_stat_succ',
+        'sysfs/schemes_stat_qt_exceed',
+        ]
+
+def kdamond_dir_of(kdamond_idx):
+    return os.path.join(get_kdamonds_dir(), '%s' % kdamond_idx)
+
+def ctx_dir_of(kdamond_idx, context_idx):
+    return os.path.join(
+            kdamond_dir_of(kdamond_idx), 'contexts', '%s' % context_idx)
+
+def target_dir_of(kdamond_idx, context_idx, target_idx):
+    return os.path.join(
+            ctx_dir_of(kdamond_idx, context_idx), 'targets',
+            '%s' % target_idx)
+
+def schemes_dir_of(kdamond_idx, context_idx):
+    return os.path.join(ctx_dir_of(kdamond_idx, context_idx), 'schemes')
+
+def _avail_ops():
+    '''Assumes called by update_supported_features() assuming one scheme.
+    Returns available ops input and error'''
+    avail_ops = []
+    avail_operations_filepath = os.path.join(ctx_dir_of(0, 0),
+            'avail_operations')
+    if not os.path.isfile(avail_operations_filepath):
+        operations_filepath = os.path.join(ctx_dir_of(0, 0), 'operations')
+        for ops in ['vaddr', 'paddr', 'fvaddr']:
+            err = _damo_fs.write_file(operations_filepath, ops)
+            if err != None:
+                avail_ops.append(ops)
+        return avail_ops, None
+
+    content, err = _damo_fs.read_file(avail_operations_filepath)
+    if err != None:
+        return None, err
+    return content.strip().split(), None
+
+def scheme_dir_of(kdamond_idx, context_idx, scheme_idx):
+    return os.path.join(
+            schemes_dir_of(kdamond_idx, context_idx), '%s' % scheme_idx)
+
+def scheme_tried_regions_dir_of(kdamond_idx, context_idx, scheme_idx):
+    return os.path.join(
+            scheme_dir_of(kdamond_idx, context_idx, scheme_idx),
+            'tried_regions')
+
+def mk_feature_supports_map():
+    '''
+    Returns a map indicating list of supported and unsupported DAMON features,
+    and an error if making the map failed.
+    Keys of the map are names of DAMON features.
+    Values are bool indicating whether the feature is supported.
+    '''
+    supports_map = {x.name: False for x in _damon_features.features_list}
+
+    for feature in features_sysfs_support_from_begining:
+        supports_map[feature] = True
+
+    orig_kdamonds = current_kdamonds()
+    # While DAMON is running, feature checking I/O can fail, corrupt something,
+    # or make something complicated.  Just don't do that.
+    for kd in orig_kdamonds:
+        if kd.state == 'on':
+            return None, 'DAMON is running'
+
+    kdamonds_for_feature_check = [
+            _damon.Kdamond(
+                state=None, pid=None, contexts=[
+                    _damon.DamonCtx(
+                        targets=[_damon.DamonTarget(
+                            pid=None, regions=[])],
+                        schemes=[_damon.Damos()])])]
+    err = stage_kdamonds(kdamonds_for_feature_check)
+    if err is not None:
+        stage_kdamonds(orig_kdamonds)
+        return None, 'staging feature check purpose kdamond failed'
+
+    if os.path.isdir(scheme_tried_regions_dir_of(0, 0, 0)):
+        supports_map['sysfs/schemes_tried_regions'] = True
+
+    if os.path.isfile(os.path.join(scheme_tried_regions_dir_of(0, 0, 0),
+            'total_bytes')):
+        supports_map['sysfs/schemes_tried_regions_sz'] = True
+        # address and target filter types are added in v6.6-rc1, together with
+        # schemes_tried_regions_sz
+        supports_map['sysfs/schemes_filters_addr'] = True
+        supports_map['sysfs/schemes_filters_target'] = True
+
+    if os.path.isdir(os.path.join(scheme_dir_of(0, 0, 0), 'filters')):
+        supports_map['sysfs/schemes_filters'] = True
+        # anon and memcg were supported from the beginning
+        supports_map['sysfs/schemes_filters_anon'] = True
+        supports_map['sysfs/schemes_filters_memcg'] = True
+        kdamonds_for_feature_check[0].contexts[0].schemes[0].filters = [
+                _damon.DamosFilter('young', True)]
+        err = stage_kdamonds(kdamonds_for_feature_check)
+        if err is None:
+            supports_map['sysfs/schemes_filters_young'] = True
+
+    if os.path.isfile(os.path.join(scheme_dir_of(0, 0, 0), 'apply_interval_us')):
+        supports_map['sysfs/schemes_apply_interval'] = True
+
+    if os.path.isdir(os.path.join(scheme_dir_of(0, 0, 0), 'quotas', 'goals')):
+        supports_map['sysfs/schemes_quota_goals'] = True
+
+    if os.path.isfile(os.path.join(scheme_dir_of(0, 0, 0), 'quotas',
+                                   'effective_bytes')):
+        supports_map['sysfs/schemes_quota_effective_bytes'] = True
+        # goal_metric and goal_some_psi will be merged together with effective bytes.
+        supports_map['sysfs/schemes_quota_goal_metric'] = True
+        supports_map['sysfs/schemes_quota_goal_some_psi'] = True
+
+    if os.path.isfile(os.path.join(scheme_dir_of(0, 0, 0), 'target_nid')):
+        supports_map['sysfs/schemes_migrate'] = True
+
+    if os.path.isfile(
+            os.path.join(scheme_dir_of(0, 0, 0),
+                         'stats', 'sz_ops_filter_passed')):
+        supports_map['sysfs/sz_ops_filter_passed'] = True
+
+    ops_filters_dir = os.path.join(scheme_dir_of(0, 0, 0), 'ops_filters')
+    if not os.path.isdir(ops_filters_dir):
+        ops_filters_dir = os.path.join(scheme_dir_of(0, 0, 0), 'filters')
+
+    if os.path.isfile(
+            os.path.join(ops_filters_dir, '0', 'allow')):
+        supports_map['sysfs/allow_filter'] = True
+
+    if os.path.isfile(
+            os.path.join(ops_filters_dir, '0', 'min')):
+        supports_map['sysfs/schemes_filters_hugepage_size'] = True
+
+    if os.path.isdir(
+            os.path.join(ctx_dir_of(0, 0),
+                         'monitoring_attrs', 'intervals', 'intervals_goal')):
+        supports_map['sysfs/intervals_goal'] = True
+
+    if os.path.isdir(
+            os.path.join(scheme_dir_of(0, 0, 0), 'core_filters')):
+        supports_map['sysfs/schemes_filters_core_ops_dirs'] = True
+
+        # unmapped and active pages DAMOS filters are merged into v6.15
+        # together with core_ops_dirs
+        supports_map['sysfs/schemes_filters_unmapped'] = True
+        supports_map['sysfs/schemes_filters_active'] = True
+
+    if supports_map['sysfs/schemes_quota_goals'] is True:
+        kdamonds_for_feature_check = [
+                _damon.Kdamond(
+                    state=None, pid=None, contexts=[
+                        _damon.DamonCtx(
+                            targets=[_damon.DamonTarget(
+                                pid=None, regions=[])],
+                            schemes=[_damon.Damos(
+                                quotas=_damon.DamosQuotas(
+                                    goals=[_damon.DamosQuotaGoal()])
+                                )])])]
+        err = stage_kdamonds(kdamonds_for_feature_check)
+        if err is not None:
+            stage_kdamonds(orig_kdamonds)
+            return None, \
+                    'staging damos goal feature check purpose kdamond failed'
+
+        if os.path.isfile(
+                os.path.join(scheme_dir_of(0, 0, 0), 'quotas', 'goals', '0',
+                             'nid')):
+            supports_map['sysfs/schemes_quota_goal_node_mem_used_free'] = True
+
+        if os.path.isfile(
+                os.path.join(scheme_dir_of(0, 0, 0), 'quotas', 'goals', '0',
+                             'path')):
+            supports_map['sysfs/schemes_quota_goal_node_memcg_used_free'] = True
+
+    if os.path.isdir(os.path.join(scheme_dir_of(0, 0, 0), 'dests')):
+        supports_map['sysfs/schemes_dests'] = True
+
+    if os.path.isfile(os.path.join(kdamond_dir_of(0), 'refresh_ms')):
+        supports_map['sysfs/refresh_ms'] = True
+
+    if os.path.isfile(os.path.join(ctx_dir_of(0, 0), 'addr_unit')):
+        supports_map['sysfs/addr_unit'] = True
+
+    if os.path.isfile(os.path.join(target_dir_of(0, 0, 0), 'obsolete_target')):
+        supports_map['sysfs/obsolete_target'] = True
+
+    if os.path.isfile(
+            os.path.join(scheme_dir_of(0, 0, 0),
+                         'stats', 'nr_snapshots')):
+        supports_map['sysfs/damos_stat_nr_snapshots'] = True
+
+    if os.path.isfile(
+            os.path.join(scheme_dir_of(0, 0, 0),
+                         'stats', 'max_nr_snapshots')):
+        supports_map['sysfs/damos_max_nr_snapshots'] = True
+        # will be upstreamed together with max_nr_snapshots
+        supports_map['sysfs/damos_quota_goal_in_active_mem_bp'] = True
+
+    if os.path.isdir(
+            os.path.join(ctx_dir_of(0, 0),
+                         'monitoring_attrs', 'sample')):
+                supports_map['sysfs/damon_sample_control'] = True
+
+    if os.path.isfile(
+            os.path.join(scheme_dir_of(0, 0, 0), 'quotas', 'goal_tuner')):
+        supports_map['sysfs/damos_quota_goal_tuner'] = True
+
+    if os.path.isfile(os.path.join(ctx_dir_of(0, 0), 'pause')):
+        supports_map['sysfs/ctx_pause'] = True
+
+    if os.path.isfile(
+            os.path.join(scheme_dir_of(0, 0, 0), 'quotas',
+                         'fail_charge_denom')):
+        supports_map['sysfs/damos_quota_fail_charge_ratio'] = True
+        # damos_collapse and damos_node_eligible_mem_bp will be upstreamed
+        # together.
+        supports_map['sysfs/damos_action_collapse'] = True
+        supports_map['sysfs/damos_quota_goal_node_eligible_mem_bp'] = True
+
+    if os.path.isdir(
+            os.path.join(ctx_dir_of(0, 0), 'monitoring_attrs', 'probes')):
+        supports_map['sysfs/attrs_monitoring'] = True
+
+    if os.path.isdir(os.path.join(ctx_dir_of(0, 0), 'operations_attrs')):
+        supports_map['sysfs/ops_attrs'] = True
+
+    avail_operations_filepath = os.path.join(ctx_dir_of(0, 0),
+            'avail_operations')
+    if os.path.isfile(avail_operations_filepath):
+        supports_map['sysfs/avail_ops'] = True
+        supports_map['sysfs/online_params_commit'] = True
+
+    avail_ops, err = _avail_ops()
+    if err == None:
+        for ops in ['vaddr', 'paddr', 'fvaddr']:
+            supports_map['sysfs/%s' % ops] = ops in avail_ops
+    err = stage_kdamonds(orig_kdamonds)
+    if err is not None:
+        return None, 'restoring original kdamonds setup failed'
+    return supports_map, None

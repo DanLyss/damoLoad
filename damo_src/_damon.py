@@ -1,0 +1,2066 @@
+# SPDX-License-Identifier: GPL-2.0
+
+"""
+Contains core functions for DAMON control.
+"""
+
+import collections
+import copy
+import os
+import random
+import subprocess
+import time
+
+import _damo_fmt_str
+
+# Core data structures
+
+class DamonFilter:
+    filter_type = None  # anon, memcg
+    matching = None
+    allow = None
+    path = None
+
+    def __init__(self, filter_type, matching, allow=False, path=None):
+        self.filter_type = filter_type
+        self.matching = _damo_fmt_str.text_to_bool(matching)
+        self.allow = _damo_fmt_str.text_to_bool(allow)
+        self.path = path
+
+    def to_str(self, raw):
+        words = []
+        if self.allow:
+            words.append('allow')
+        else:
+            words.append('reject')
+        if self.matching is False:
+            words.append('non')
+        words.append(self.filter_type)
+        if self.filter_type in ['anon']:
+            return ' '.join(words)
+        if self.filter_type == 'memcg':
+            return ' '.join(words + [self.path])
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and \
+                self.filter_type == other.filter_type and \
+                self.matching == other.matching and \
+                self.allow == other.allow and self.path == other.path
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        return DamonFilter(
+                filter_type=kv['filter_type'], matching=kv['matching'],
+                allow=kv['allow'], path=kv['path'])
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('filter_type', self.filter_type),
+            ('matching', self.matching),
+            ('allow', self.allow),
+            ('path', self.path),
+            ])
+
+class DamonProbe:
+    filters = None
+
+    def __init__(self, filters):
+        if type(filters) is not list:
+            raise Exception('filters for DamonProbe() is not a list')
+        self.filters = filters
+
+    def to_str(self, raw):
+        return ', '.join([f.to_str(raw) for f in self.filters])
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and \
+                self.filters == other.filters
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        return DamonProbe(filters=[
+                DamonFilter.from_kvpairs(filter_kv)
+                for filter_kv in kv['filters']])
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('filters', [f.to_kvpairs(raw) for f in self.filters]),
+            ])
+
+class OpsAttrs:
+    use_reports = None
+    write_only = None
+    cpus = None         #cpus list string
+    tids = None         #thread ids list string
+
+    def __init__(self, use_reports=False, write_only=False, cpus=None,
+                 tids=None):
+        self.use_reports = _damo_fmt_str.text_to_bool(use_reports)
+        self.write_only = _damo_fmt_str.text_to_bool(write_only)
+        self.cpus = cpus if cpus is not None else 'all'
+        self.tids = tids if tids is not None else ''
+
+    def to_str(self, raw):
+        return 'use_reports: %s, write_only: %s, cpus: %s, threads: %s' % (
+                self.use_reports, self.write_only, self.cpus, self.tids)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and \
+                self.use_reports == other.use_reports and \
+                self.write_only == other.write_only and \
+                self.cpus == other.cpus and \
+                self.tids == other.tids
+
+    @classmethod
+    def from_kvpairs(cls, kvpairs):
+        use_reports = kvpairs['use_reports'] \
+                if 'use_reports' in kvpairs else False
+        write_only = kvpairs['write_only'] \
+                if 'write_only' in kvpairs else False
+        cpus = kvpairs['cpus'] if 'cpus' in kvpairs else 'all'
+        tids = kvpairs['tids'] if 'tids' in kvpairs else ''
+        return OpsAttrs(use_reports=use_reports, write_only=write_only,
+                        cpus=cpus, tids=tids)
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('use_reports', self.use_reports),
+            ('write_only', self.write_only),
+            ('cpus', self.cpus),
+            ('tids', self.tids),
+            ])
+
+class DamonIntervalsGoal:
+    access_bp = None
+    aggrs = None
+    min_sample_us = None
+    max_sample_us = None
+
+    def __init__(self, access_bp='0%', aggrs=0, min_sample_us=0, max_sample_us=0):
+        self.access_bp = _damo_fmt_str.text_to_bp(access_bp)
+        self.aggrs = _damo_fmt_str.text_to_nr(aggrs)
+        self.min_sample_us = _damo_fmt_str.text_to_us(min_sample_us)
+        self.max_sample_us = _damo_fmt_str.text_to_us(max_sample_us)
+
+    def to_str(self, raw):
+        return 'target %s accesses per %s aggrs, [%s, %s] sampling interval' % (
+                _damo_fmt_str.format_bp(self.access_bp, raw),
+                _damo_fmt_str.format_nr(self.aggrs, raw),
+                _damo_fmt_str.format_time_us(self.min_sample_us, raw),
+                _damo_fmt_str.format_time_us(self.max_sample_us, raw))
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and '%s' % self == '%s' % other
+
+    @classmethod
+    def from_kvpairs(cls, kvpairs):
+        return DamonIntervalsGoal(
+                kvpairs['access_bp'], kvpairs['aggrs'],
+                kvpairs['min_sample_us'], kvpairs['max_sample_us'])
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('access_bp', _damo_fmt_str.format_bp(self.access_bp, raw)),
+            ('aggrs', _damo_fmt_str.format_nr(self.aggrs, raw)),
+            ('min_sample_us', _damo_fmt_str.format_time_us(
+                self.min_sample_us, raw)),
+            ('max_sample_us', _damo_fmt_str.format_time_us(
+                self.max_sample_us, raw)),
+            ])
+
+    def enabled(self):
+        return self.aggrs != 0
+
+class DamonIntervals:
+    sample = None
+    aggr = None
+    ops_update = None
+    intervals_goal = None
+
+    def __init__(self, sample='5ms', aggr='100ms', ops_update='1s',
+                 intervals_goal=DamonIntervalsGoal()):
+        self.sample = _damo_fmt_str.text_to_us(sample)
+        self.aggr = _damo_fmt_str.text_to_us(aggr)
+        self.ops_update = _damo_fmt_str.text_to_us(ops_update)
+        self.intervals_goal = intervals_goal
+
+    def to_str(self, raw):
+        lines = ['sample %s, aggr %s, update %s' % (
+                _damo_fmt_str.format_time_us(self.sample, raw),
+                _damo_fmt_str.format_time_us(self.aggr, raw),
+                _damo_fmt_str.format_time_us(self.ops_update, raw))]
+        if self.intervals_goal.enabled():
+            lines.append('%s' % self.intervals_goal.to_str(raw))
+        return '\n'.join(lines)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and '%s' % self == '%s' % other
+
+    @classmethod
+    def from_kvpairs(cls, kvpairs):
+        if not 'intervals_goal' in kvpairs:
+            return DamonIntervals(
+                    kvpairs['sample_us'], kvpairs['aggr_us'],
+                    kvpairs['ops_update_us'])
+        return DamonIntervals(
+                kvpairs['sample_us'], kvpairs['aggr_us'],
+                kvpairs['ops_update_us'],
+                DamonIntervalsGoal.from_kvpairs(kvpairs['intervals_goal']))
+
+    def to_kvpairs(self, raw=False, omit_defaults=False):
+        kvp = collections.OrderedDict([
+            ('sample_us', _damo_fmt_str.format_time_us(self.sample, raw)),
+            ('aggr_us', _damo_fmt_str.format_time_us(self.aggr, raw)),
+            ('ops_update_us',
+                _damo_fmt_str.format_time_us(self.ops_update, raw))])
+        if not omit_defaults or self.intervals_goal != DamonIntervalsGoal():
+            kvp['intervals_goal'] = self.intervals_goal.to_kvpairs(raw)
+        return kvp
+
+class DamonNrRegionsRange:
+    minimum = None
+    maximum = None
+
+    def __init__(self, min_=10, max_=1000):
+        self.minimum = _damo_fmt_str.text_to_nr(min_)
+        self.maximum = _damo_fmt_str.text_to_nr(max_)
+
+    def to_str(self, raw):
+        return '[%s, %s]' % (
+                _damo_fmt_str.format_nr(self.minimum, raw),
+                _damo_fmt_str.format_nr(self.maximum, raw))
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and '%s' % self == '%s' % other
+
+    @classmethod
+    def from_kvpairs(cls, kvpairs):
+        return DamonNrRegionsRange(kvpairs['min'], kvpairs['max'])
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('min', _damo_fmt_str.format_nr(self.minimum, raw)),
+            ('max', _damo_fmt_str.format_nr(self.maximum, raw)),
+            ])
+
+damon_filter_type_cpumask = 'cpumask'
+damon_filter_type_threads = 'threads'
+damon_filter_type_write = 'write'
+
+class DamonSampleFilter:
+    filter_type = None
+    matching = None
+    allow = None
+    cpumask = None # the kernel-accepting cpumask string or None
+    tid_arr = None # the kernel-accepting integer array string or None
+
+    def __init__(self, filter_type, matching, allow, cpumask=None,
+                 tid_arr=None):
+        self.filter_type = filter_type
+        self.matching = matching
+        self.allow = allow
+        self.cpumask = cpumask
+        self.tid_arr = tid_arr
+
+    def to_str(self, raw):
+        words = []
+        if self.allow:
+            words.append('allow')
+        else:
+            words.append('reject')
+        if self.matching is False:
+            words.append('none')
+        words.append(self.filter_type)
+        if self.filter_type == damon_filter_type_cpumask:
+            words.append(self.cpumask)
+        elif self.filter_type == damon_filter_type_threads:
+            words.append(self.tid_arr)
+        return ' '.join(words)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and \
+                self.filter_type == other.filter_type and \
+                self.matching == other.matching and \
+                self.allow == other.allow and \
+                self.cpumask == other.cpumask and self.tid_arr == other.tid_arr
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        return DamonSampleFilter(
+                filter_type=kv['filter_type'], matching=kv['matching'],
+                allow=kv['allow'], cpumask=kv['cpumask'],
+                tid_arr=kv['tid_arr'])
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('filter_type', self.filter_type),
+            ('matching', self.matching),
+            ('allow', self.allow),
+            ('cpumask', self.cpumask),
+            ('tid_arr', self.tid_arr),
+            ])
+
+class DamonPrimitivesEnabled:
+    page_table = None
+    page_fault = None
+
+    def __init__(self, page_table=True, page_fault=False):
+        self.page_table = _damo_fmt_str.text_to_bool(page_table)
+        self.page_fault = _damo_fmt_str.text_to_bool(page_fault)
+
+    def to_str(self, raw):
+        words = []
+        if self.page_table is True:
+            words.append('page_table')
+        if self.page_fault is True:
+            words.append('page_fault')
+        return ', '.join(words)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and \
+                self.page_table == other.page_table and \
+                self.page_fault == other.page_fault
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        return DamonPrimitivesEnabled(
+                page_table=kv['page_table'], page_fault=kv['page_fault'])
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('page_table', self.page_table),
+            ('page_fault', self.page_fault),
+            ])
+
+class DamonSampleControl:
+    primitives_enabled = None
+    sample_filters = None
+
+    def __init__(self, primitives_enabled=None, sample_filters=None):
+        if primitives_enabled is None:
+            primitives_enabled = DamonPrimitivesEnabled()
+        if sample_filters is None:
+            sample_filters = []
+        self.primitives_enabled = primitives_enabled
+        self.sample_filters = sample_filters
+
+    def to_str(self, raw):
+        lines = [
+                'enabled primitives: %s' % self.primitives_enabled.to_str(raw)]
+        if len(self.sample_filters) > 0:
+            lines.append('Filters')
+            for filter in self.sample_filters:
+                lines.append('- %s' % filter.to_str(raw))
+        return '\n'.join(lines)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and \
+                self.primitives_enabled == other.primitives_enabled and \
+                self.sample_filters == other.sample_filters
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        return DamonSampleControl(
+                primitives_enabled=DamonPrimitivesEnabled.from_kvpairs(
+                    kv['primitives_enabled']),
+                sample_filters=[DamonSampleFilter.from_kvpairs(kvpairs)
+                                for kvpairs in kv['sample_filters']])
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('primitives_enabled', self.primitives_enabled.to_kvpairs(raw)),
+            ('sample_filters', [
+                f.to_kvpairs(raw) for f in self.sample_filters]),
+            ])
+
+unit_percent = 'percent'
+unit_samples = 'samples'
+unit_usec = 'usec'
+unit_aggr_intervals = 'aggr_intervals'
+
+class DamonNrAccesses:
+    samples = None
+    percent = None
+    hz = None
+
+    def __init__(self, val, unit):
+        if val == None or unit == None:
+            return
+        if unit == unit_samples:
+            self.samples = _damo_fmt_str.text_to_nr(val)
+        elif unit == unit_percent:
+            self.percent = _damo_fmt_str.text_to_percent(val)
+        else:
+            raise Exception('invalid DamonNrAccesses unit \'%s\'' % unit)
+
+    def __eq__(self, other):
+        return (type(self) == type(other) and
+                ((self.samples != None and self.samples == other.samples) or
+                    (self.percent != None and self.percent == other.percent)
+                 ))
+
+    def in_hz(self, aggr_us):
+        return self.samples / (aggr_us / 1000000)
+
+    def in_percent(self, sample_us, aggr_us):
+        max_samples = aggr_us / sample_us
+        return self.samples * 100.0 / max_samples
+
+    def add_unset_unit(self, intervals):
+        if self.samples != None and self.percent != None:
+            return
+        max_val = intervals.aggr / intervals.sample
+        if self.samples == None:
+            self.samples = int(self.percent * max_val / 100)
+        if self.percent == None:
+            self.percent = int(self.samples * 100.0 / max_val)
+
+    def to_str(self, unit, raw):
+        if unit == unit_percent:
+            return '%s %%' % (_damo_fmt_str.format_nr(self.percent, raw))
+        elif unit == unit_samples:
+            return '%s %s' % (_damo_fmt_str.format_nr(self.samples, raw),
+                    unit_samples)
+        raise Exception('unsupported unit for NrAccesses (%s)' % unit)
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        ret = DamonNrAccesses(None, None)
+        if 'samples' in kv and kv['samples'] != None:
+            ret.samples = _damo_fmt_str.text_to_nr(kv['samples'])
+        if 'percent' in kv and kv['percent'] != None:
+            ret.percent = _damo_fmt_str.text_to_percent(kv['percent'])
+        return ret
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict(
+                [('samples', self.samples), ('percent', self.percent),
+                 ])
+
+class DamonAge:
+    usec = None
+    aggr_intervals = None
+
+    def __init__(self, val, unit):
+        if val == None and unit != None:
+            self.unit = unit
+            return
+        if val == None and unit == None:
+            return
+        if unit == unit_usec:
+            self.usec = _damo_fmt_str.text_to_us(val)
+        elif unit == unit_aggr_intervals:
+            self.aggr_intervals = _damo_fmt_str.text_to_nr(val)
+        else:
+            raise Exception('DamonAge unsupported unit (%s)' % unit)
+
+    def __eq__(self, other):
+        return (type(self) == type(other) and
+                ((self.usec != None and self.usec == other.usec) or
+                    (self.aggr_intervals != None and
+                        self.aggr_intervals == other.aggr_intervals)))
+
+    def add_unset_unit(self, intervals):
+        if self.usec != None and self.aggr_intervals != None:
+            return
+        if self.usec == None:
+            self.usec = self.aggr_intervals * intervals.aggr
+        elif self.aggr_intervals == None:
+            self.aggr_intervals = int(self.usec / intervals.aggr)
+
+    def to_str(self, unit, raw):
+        if unit == unit_usec:
+            return _damo_fmt_str.format_time_us_exact(self.usec, raw)
+        if self.aggr_intervals is None:
+            return 'unkown %s' % unit_aggr_intervals
+        return '%s %s' % (_damo_fmt_str.format_nr(self.aggr_intervals, raw),
+                unit_aggr_intervals)
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        ret = DamonAge(None, None)
+        if kv['usec'] != None:
+            ret.usec = _damo_fmt_str.text_to_us(kv['usec'])
+        if kv['aggr_intervals'] != None:
+            ret.aggr_intervals = _damo_fmt_str.text_to_nr(kv['aggr_intervals'])
+        return ret
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict(
+                [('usec', _damo_fmt_str.format_time_us_exact(self.usec, raw)
+                    if self.usec != None else None),
+                    ('aggr_intervals',
+                        _damo_fmt_str.format_nr(self.aggr_intervals, raw)
+                        if self.aggr_intervals != None else None)])
+
+class DamonRegion:
+    # [start, end)
+    start = None
+    end = None
+    # nr_accesses and age could be None
+    nr_accesses = None
+    probe_hits = None   # list of integers
+    age = None
+    sz_filter_passed = None
+    scheme = None # non-None if tried region
+
+    def __init__(self, start, end, nr_accesses=None, nr_accesses_unit=None,
+            age=None, age_unit=None, sz_filter_passed=0, probe_hits=None):
+        self.start = _damo_fmt_str.text_to_bytes(start)
+        self.end = _damo_fmt_str.text_to_bytes(end)
+
+        if nr_accesses == None:
+            return
+        self.nr_accesses = DamonNrAccesses(nr_accesses, nr_accesses_unit)
+        self.age = DamonAge(age, age_unit)
+        self.sz_filter_passed = sz_filter_passed
+        if probe_hits is None:
+            probe_hits = []
+        self.probe_hits = probe_hits
+
+    def to_str(self, raw, intervals=None):
+        if self.nr_accesses == None:
+            return _damo_fmt_str.format_addr_range(self.start, self.end, raw)
+
+        if intervals != None:
+            self.nr_accesses.add_unset_unit(intervals)
+            self.age.add_unset_unit(intervals)
+
+        if raw == False and intervals != None:
+            nr_accesses_unit = unit_percent
+            age_unit = unit_usec
+        else:
+            nr_accesses_unit = unit_samples
+            age_unit = unit_aggr_intervals
+        str = '%s: nr_accesses: %s, age: %s' % (
+                _damo_fmt_str.format_addr_range(self.start, self.end, raw),
+                self.nr_accesses.to_str(nr_accesses_unit, raw),
+                self.age.to_str(age_unit, raw))
+        if self.probe_hits:
+            str += ', probe_hits: %s' % ' '.join(
+                    ['%d' % h for h in self.probe_hits])
+        if self.sz_filter_passed is not None:
+            str += ', filter_passed: %s' % _damo_fmt_str.format_sz(
+                    self.sz_filter_passed, raw)
+        return str
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and '%s' % self == '%s' % other
+
+    # For aggregate_snapshots() support
+    def __hash__(self):
+        identification = '%s-%s' % (self.start, self.end)
+        return hash(identification)
+
+    @classmethod
+    def from_kvpairs(cls, kvpairs):
+        if not 'nr_accesses' in kvpairs:
+            return DamonRegion(kvpairs['start'], kvpairs['end'])
+        region = DamonRegion(kvpairs['start'], kvpairs['end'])
+        region.nr_accesses = DamonNrAccesses.from_kvpairs(
+                kvpairs['nr_accesses'])
+        region.probe_hits = kvpairs.get('probe_hits', [])
+        region.age = DamonAge.from_kvpairs(kvpairs['age'])
+        if 'sz_filter_passed' in kvpairs:
+            region.sz_filter_passed = _damo_fmt_str.text_to_bytes(
+                    kvpairs['sz_filter_passed'])
+        else:
+            region.sz_filter_passed = 0
+        return region
+
+    def to_kvpairs(self, raw=False):
+        if self.nr_accesses == None:
+            return collections.OrderedDict([
+                ('start', _damo_fmt_str.format_nr(self.start, raw)),
+                ('end', _damo_fmt_str.format_nr(self.end, raw))])
+        return collections.OrderedDict([
+            ('start', _damo_fmt_str.format_nr(self.start, raw)),
+            ('end', _damo_fmt_str.format_nr(self.end, raw)),
+            ('nr_accesses', self.nr_accesses.to_kvpairs(raw)),
+            ('age', self.age.to_kvpairs(raw)),
+            ('probe_hits', self.probe_hits),
+            ('sz_filter_passed', _damo_fmt_str.format_sz(
+                self.sz_filter_passed, raw)),
+            ])
+
+    def size(self):
+        return self.end - self.start
+
+class DamonTarget:
+    pid = None
+    obsolete = None
+    regions = None
+    context = None
+
+    def __init__(self, pid, regions=[], obsolete=False):
+        self.pid = pid
+        self.regions = regions
+        self.obsolete = _damo_fmt_str.text_to_bool(obsolete)
+
+    def to_str(self, raw):
+        lines = []
+        if self.pid is not None:
+            lines.append('pid: %s' % self.pid)
+        if self.obsolete is True:
+            lines.append('(obsolete)')
+        for region in self.regions:
+            lines.append('region %s' % region.to_str(raw))
+        return '\n'.join(lines)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and '%s' % self == '%s' % other
+
+    @classmethod
+    def from_kvpairs(cls, kvpairs):
+        regions = [DamonRegion.from_kvpairs(kvp) for kvp in kvpairs['regions']]
+        obsolete = False
+        if 'obsolete' in kvpairs:
+            obsolete = kvpairs['obsolete']
+        return DamonTarget(kvpairs['pid'], regions, obsolete=obsolete)
+
+    def to_kvpairs(self, raw=False):
+        kvp = collections.OrderedDict()
+        kvp['pid'] = self.pid
+        kvp['obsolete'] = self.obsolete
+        kvp['regions'] = [r.to_kvpairs(raw) for r in self.regions]
+        return kvp
+
+class DamosAccessPattern:
+    sz_bytes = None
+    nr_acc_min_max = None # [min/max DamonNrAccesses]
+    nr_accesses_unit = None
+    age_min_max = None # [min/max DamonAge]
+    age_unit = None
+
+    # every region by default, so that it can be used for monitoring
+    def __init__(self, sz_bytes=['min', 'max'],
+            nr_accesses=['min', 'max'], nr_accesses_unit=unit_percent,
+            age=['min', 'max'], age_unit=unit_usec):
+        self.sz_bytes = [_damo_fmt_str.text_to_bytes(sz_bytes[0]),
+                _damo_fmt_str.text_to_bytes(sz_bytes[1])]
+
+        self.nr_acc_min_max = [
+                DamonNrAccesses(nr_accesses[0], nr_accesses_unit),
+                DamonNrAccesses(nr_accesses[1], nr_accesses_unit)]
+        self.nr_accesses_unit = nr_accesses_unit
+        self.age_min_max = [
+                DamonAge(age[0], age_unit), DamonAge(age[1], age_unit)]
+        self.age_unit = age_unit
+
+    def to_str(self, raw):
+        lines = [
+            'sz: [%s, %s]' % (_damo_fmt_str.format_sz(self.sz_bytes[0], raw),
+                _damo_fmt_str.format_sz(self.sz_bytes[1], raw)),
+            ]
+        lines.append('nr_accesses: [%s, %s]' % (
+            self.nr_acc_min_max[0].to_str(self.nr_accesses_unit, raw),
+            self.nr_acc_min_max[1].to_str(self.nr_accesses_unit, raw)))
+        lines.append('age: [%s, %s]' % (
+            self.age_min_max[0].to_str(self.age_unit, raw),
+            self.age_min_max[1].to_str(self.age_unit, raw)))
+        return '\n'.join(lines)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return (type(self) == type(other) and
+                self.sz_bytes == other.sz_bytes and
+                self.nr_acc_min_max == other.nr_acc_min_max and
+                self.age_min_max == other.age_min_max)
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        sz_bytes = [_damo_fmt_str.text_to_bytes(kv['sz_bytes']['min']),
+                _damo_fmt_str.text_to_bytes(kv['sz_bytes']['max'])]
+
+        kv_ = kv['nr_accesses']
+        try:
+            nr_accesses = [_damo_fmt_str.text_to_percent(kv_['min']),
+                    _damo_fmt_str.text_to_percent(kv_['max'])]
+            nr_accesses_unit = unit_percent
+        except:
+            min_, nr_accesses_unit = _damo_fmt_str.text_to_nr_unit(kv_['min'])
+            max_, nr_accesses_unit2 = _damo_fmt_str.text_to_nr_unit(kv_['max'])
+            if nr_accesses_unit != nr_accesses_unit2:
+                raise Exception('nr_accesses units should be same')
+            nr_accesses = [min_, max_]
+
+        kv_ = kv['age']
+        try:
+            age = [_damo_fmt_str.text_to_us(kv_['min']),
+                    _damo_fmt_str.text_to_us(kv_['max'])]
+            age_unit = unit_usec
+        except:
+            min_age, age_unit = _damo_fmt_str.text_to_nr_unit(kv_['min'])
+            max_age, age_unit2 = _damo_fmt_str.text_to_nr_unit(kv_['max'])
+            if age_unit != age_unit2:
+                raise Exception('age units should be same')
+            age = [min_age, max_age]
+
+        return DamosAccessPattern(sz_bytes, nr_accesses, nr_accesses_unit, age,
+                age_unit)
+
+    def to_kvpairs(self, raw=False):
+        min_nr_accesses = self.nr_acc_min_max[0].to_str(
+                self.nr_accesses_unit, raw)
+        max_nr_accesses = self.nr_acc_min_max[1].to_str(
+                self.nr_accesses_unit, raw)
+        min_age = self.age_min_max[0].to_str(self.age_unit, raw)
+        max_age = self.age_min_max[1].to_str(self.age_unit, raw)
+
+        return collections.OrderedDict([
+            ('sz_bytes', (collections.OrderedDict([
+                ('min', _damo_fmt_str.format_sz(self.sz_bytes[0], raw)),
+                ('max', _damo_fmt_str.format_sz(self.sz_bytes[1], raw))]))),
+            ('nr_accesses', (collections.OrderedDict([
+                ('min', min_nr_accesses), ('max', max_nr_accesses)]))),
+            ('age', (collections.OrderedDict([
+                ('min', min_age), ('max', max_age)]))),
+            ])
+
+    def convert_for_units(self, nr_accesses_unit, age_unit, intervals):
+        self.nr_acc_min_max[0].add_unset_unit(intervals)
+        self.nr_acc_min_max[1].add_unset_unit(intervals)
+        self.age_min_max[0].add_unset_unit(intervals)
+        self.age_min_max[1].add_unset_unit(intervals)
+        self.nr_accesses_unit = nr_accesses_unit
+        self.age_unit = age_unit
+
+    def converted_for_units(self, nr_accesses_unit, age_unit, intervals):
+        copied = copy.deepcopy(self)
+        copied.convert_for_units(nr_accesses_unit, age_unit, intervals)
+        return copied
+
+    def effectively_equal(self, other, intervals):
+        return (
+                self.converted_for_units(
+                    unit_samples, unit_aggr_intervals, intervals) ==
+                other.converted_for_units(
+                    unit_samples, unit_aggr_intervals, intervals))
+
+class DamosDest:
+    id = None
+    weight = None
+
+    def __init__(self, id=0, weight=0):
+        self.id = _damo_fmt_str.text_to_nr(id)
+        self.weight = _damo_fmt_str.text_to_nr(weight)
+
+    def to_str(self, raw):
+        return 'id: %s, weight: %s' % (
+                _damo_fmt_str.format_nr(self.id, raw),
+                _damo_fmt_str.format_nr(self.weight, raw))
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return (type(self) == type(other) and
+                self.id == other.id and self.weight == other.weight)
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        return DamosDest(kv['id'], kv['weight'])
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('id', self.id),
+            ('weight', self.weight),
+            ])
+
+qgoal_user_input = 'user_input'
+qgoal_some_mem_psi_us = 'some_mem_psi_us'
+qgoal_node_mem_used_bp = 'node_mem_used_bp'
+qgoal_node_mem_free_bp = 'node_mem_free_bp'
+qgoal_node_memcg_used_bp = 'node_memcg_used_bp'
+qgoal_node_memcg_free_bp = 'node_memcg_free_bp'
+qgoal_active_mem_bp = 'active_mem_bp'
+qgoal_inactive_mem_bp = 'inactive_mem_bp'
+qgoal_node_eligible_mem_bp = 'node_eligible_mem_bp'
+qgoal_metrics = [qgoal_user_input, qgoal_some_mem_psi_us,
+                 qgoal_node_mem_used_bp, qgoal_node_mem_free_bp,
+                 qgoal_node_memcg_used_bp, qgoal_node_memcg_free_bp,
+                 qgoal_active_mem_bp, qgoal_inactive_mem_bp,
+                 qgoal_node_eligible_mem_bp,
+                 ]
+
+class DamosQuotaGoal:
+    metric = None
+    target_value = None
+    current_value = None
+    nid = None
+    memcg_path = None
+    quotas = None
+
+    def __init__(self, metric=qgoal_user_input,
+                 target_value='0', current_value='0', nid=None,
+                 memcg_path=None):
+        if not metric in qgoal_metrics:
+            raise Exception('unsupported DAMOS quota goal metric')
+        self.metric = metric
+        if metric == qgoal_some_mem_psi_us:
+            self.target_value = _damo_fmt_str.text_to_us(target_value)
+        elif metric in [qgoal_node_mem_used_bp, qgoal_node_mem_free_bp,
+                        qgoal_node_memcg_used_bp, qgoal_node_memcg_free_bp,
+                        qgoal_active_mem_bp, qgoal_inactive_mem_bp]:
+            self.target_value = _damo_fmt_str.text_to_bp(target_value)
+        else:
+            self.target_value = _damo_fmt_str.text_to_nr(target_value)
+        self.current_value = _damo_fmt_str.text_to_nr(current_value)
+        if nid is None:
+            self.nid = None
+        else:
+            self.nid = _damo_fmt_str.text_to_nr(nid)
+        self.memcg_path = memcg_path
+
+    @classmethod
+    def metric_require_nid(cls, metric):
+        return metric in [qgoal_node_mem_used_bp, qgoal_node_mem_free_bp,
+                          qgoal_node_memcg_used_bp, qgoal_node_memcg_free_bp]
+
+    def has_nid(self):
+        return DamosQuotaGoal.metric_require_nid(self.metric)
+
+    @classmethod
+    def metric_require_memcg_path(cls, metric):
+        return metric in [qgoal_node_memcg_used_bp, qgoal_node_memcg_free_bp]
+
+    def has_memcg_path(self):
+        return DamosQuotaGoal.metric_require_memcg_path(self.metric)
+
+    def to_str(self, raw):
+        metric_str = self.metric
+        additional_words = []
+        if self.has_nid():
+            additional_words.append('nid %s' %
+                                    _damo_fmt_str.format_nr(self.nid, raw))
+        if self.has_memcg_path():
+            additional_words.append('memcg %s' % self.memcg_path)
+
+        if len(additional_words) > 0:
+            metric_str = '%s (%s)' % (metric_str, ', '.join(additional_words))
+        return 'metric %s target %s current %s' % (
+                metric_str,
+                _damo_fmt_str.format_nr(self.target_value, raw),
+                _damo_fmt_str.format_nr(self.current_value, raw),)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return (type(self) == type(other) and self.metric == other.metric and
+                self.nid == other.nid and
+                self.memcg_path == other.memcg_path and
+                self.target_value == other.target_value and
+                self.current_value == other.current_value)
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        if 'target_value_bp' in kv:
+            # For supporting old version of bad naming.  Should deprecate
+            # later.
+            return DamosQuotaGoal(target_value=kv['target_value_bp'],
+                                  current_value=kv['current_value_bp'])
+        if 'memcg_path' in kv:
+            memcg_path = kv['memcg_path']
+        else:
+            memcg_path = None
+        return DamosQuotaGoal(
+                metric=kv['metric'], nid=kv['nid'] if 'nid' in kv else None,
+                memcg_path=memcg_path,
+                target_value=kv['target_value'],
+                current_value=kv['current_value'])
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('metric', self.metric),
+            ('nid', _damo_fmt_str.format_nr(self.nid, raw)
+             if self.nid is not None else None),
+            ('memcg_path', self.memcg_path),
+            ('target_value', _damo_fmt_str.format_nr(self.target_value,
+                raw)),
+            ('current_value', _damo_fmt_str.format_nr(self.current_value,
+                raw))])
+
+damos_qgtuner_consist = 'consist'
+damos_qgtuner_temporal = 'temporal'
+
+class DamosQuotas:
+    time_ms = None
+    sz_bytes = None
+    reset_interval_ms = None
+    weight_sz_permil = None
+    weight_nr_accesses_permil = None
+    weight_age_permil = None
+    fail_charge_num = None
+    fail_charge_denom = None
+    goals = None
+    goal_tuner = None
+    effective_sz_bytes = None
+    scheme = None
+
+    def __init__(self, time_ms=0, sz_bytes=0, reset_interval_ms='max',
+            weights=['0 %', '0 %', '0 %'], goals=[], goal_tuner=None,
+                 effective_sz_bytes=0,
+                 fail_charge_num=0, fail_charge_denom=0):
+        self.time_ms = _damo_fmt_str.text_to_ms(time_ms)
+        self.sz_bytes = _damo_fmt_str.text_to_bytes(sz_bytes)
+        self.reset_interval_ms = _damo_fmt_str.text_to_ms(reset_interval_ms)
+        self.weight_sz_permil = _damo_fmt_str.text_to_permil(weights[0])
+        self.weight_nr_accesses_permil = _damo_fmt_str.text_to_permil(
+                weights[1])
+        self.weight_age_permil = _damo_fmt_str.text_to_permil(weights[2])
+        self.fail_charge_num = _damo_fmt_str.text_to_nr(fail_charge_num)
+        self.fail_charge_denom = _damo_fmt_str.text_to_nr(fail_charge_denom)
+        self.goals = goals
+        if goal_tuner is None:
+            self.goal_tuner = damos_qgtuner_consist
+        else:
+            self.goal_tuner = goal_tuner
+        self.effective_sz_bytes = _damo_fmt_str.text_to_bytes(
+                effective_sz_bytes)
+        for goal in self.goals:
+            goal.quotas = self
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return (type(self) == type(other) and self.time_ms == other.time_ms and
+                self.sz_bytes == other.sz_bytes and self.reset_interval_ms ==
+                other.reset_interval_ms and self.weight_sz_permil ==
+                other.weight_sz_permil and self.weight_nr_accesses_permil ==
+                other.weight_nr_accesses_permil and self.weight_age_permil ==
+                other.weight_age_permil and
+                self.fail_charge_num == other.fail_charge_num and
+                self.fail_charge_denom == other.fail_charge_denom and
+                self.goals == other.goals and
+                self.goal_tuner == other.goal_tuner)
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        if 'goals' in kv:
+            goals = [DamosQuotaGoal.from_kvpairs(goal) for goal in kv['goals']]
+        else:
+            goals = []
+        goal_tuner = kv.get('goal_tuner', damos_qgtuner_consist)
+        fail_charge_num = kv.get('fail_charge_num', 0)
+        fail_charge_denom = kv.get('fail_charge_denom', 0)
+        return DamosQuotas(kv['time_ms'], kv['sz_bytes'],
+                kv['reset_interval_ms'],
+                [kv['weights']['sz_permil'],
+                    kv['weights']['nr_accesses_permil'],
+                    kv['weights']['age_permil'],],
+                goals, goal_tuner,
+                kv['effective_sz_bytes'] if 'effective_sz_bytes' in kv else 0,
+                fail_charge_num=fail_charge_num,
+                fail_charge_denom=fail_charge_denom)
+
+    def to_str(self, raw, params_only=False):
+        if params_only is False:
+            lines = [
+                '%s / %s / %s per %s' % (
+                    _damo_fmt_str.format_time_ns(self.time_ms * 1000000, raw),
+                    _damo_fmt_str.format_sz(self.sz_bytes, raw),
+                    _damo_fmt_str.format_sz(self.effective_sz_bytes, raw),
+                    _damo_fmt_str.format_time_ms(self.reset_interval_ms, raw))]
+        else:
+            lines = [
+                '%s / %s per %s' % (
+                    _damo_fmt_str.format_time_ns(self.time_ms * 1000000, raw),
+                    _damo_fmt_str.format_sz(self.sz_bytes, raw),
+                    _damo_fmt_str.format_time_ms(self.reset_interval_ms, raw))]
+        if self.fail_charge_denom != 0:
+            lines.append('fail charge ratio: %d/%d/' %
+                         (self.fail_charge_num, self.fail_charge_denom))
+
+        for idx, goal in enumerate(self.goals):
+            lines.append('goal %d: %s' % (idx, goal.to_str(raw)))
+        if len(self.goals) > 0:
+            lines.append('goal tuner: %s' % self.goal_tuner)
+        lines.append(
+            'priority: sz %s, nr_accesses %s, age %s' % (
+                _damo_fmt_str.format_permil(self.weight_sz_permil, raw),
+                _damo_fmt_str.format_permil(
+                    self.weight_nr_accesses_permil, raw),
+                _damo_fmt_str.format_permil(self.weight_age_permil, raw)))
+        return '\n'.join(lines)
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('time_ms', _damo_fmt_str.format_time_ms_exact(self.time_ms, raw)),
+            ('sz_bytes', _damo_fmt_str.format_sz(self.sz_bytes, raw)),
+            ('reset_interval_ms', _damo_fmt_str.format_time_ms_exact(
+                self.reset_interval_ms, raw)),
+            ('fail_charge_num',
+             _damo_fmt_str.format_nr(self.fail_charge_num, raw)),
+            ('fail_charge_denom',
+             _damo_fmt_str.format_nr(self.fail_charge_denom, raw)),
+            ('goals', [goal.to_kvpairs(raw) for goal in self.goals]),
+            ('goal_tuner', self.goal_tuner),
+            ('effective_sz_bytes',
+             _damo_fmt_str.format_sz(self.effective_sz_bytes, raw)),
+            ('weights', (collections.OrderedDict([
+                ('sz_permil',
+                    _damo_fmt_str.format_permil(self.weight_sz_permil, raw)),
+                ('nr_accesses_permil', _damo_fmt_str.format_permil(
+                    self.weight_nr_accesses_permil, raw)),
+                ('age_permil',
+                    _damo_fmt_str.format_permil(self.weight_age_permil, raw))])
+                ))])
+
+damos_wmarks_metric_none = 'none'
+damos_wmarks_metric_free_mem_rate = 'free_mem_rate'
+
+class DamosWatermarks:
+    metric = None
+    interval_us = None
+    high_permil = None
+    mid_permil = None
+    low_permil = None
+
+    # no limit by default
+    def __init__(self, metric=damos_wmarks_metric_none, interval_us=0,
+            high='0 %', mid='0 %', low='0 %'):
+        # 'none' or 'free_mem_rate'
+        if not metric in [damos_wmarks_metric_none,
+                damos_wmarks_metric_free_mem_rate]:
+            raise Exception('wrong watermark metric (%s)' % metric)
+        self.metric = metric
+        self.interval_us = _damo_fmt_str.text_to_us(interval_us)
+        self.high_permil = _damo_fmt_str.text_to_permil(high)
+        self.mid_permil = _damo_fmt_str.text_to_permil(mid)
+        self.low_permil = _damo_fmt_str.text_to_permil(low)
+
+    def to_str(self, raw):
+        return '\n'.join([
+            'metric %s, interval %s' % (self.metric,
+                _damo_fmt_str.format_time_us(self.interval_us, raw)),
+            '%s, %s, %s' % (
+                _damo_fmt_str.format_permil(self.high_permil, raw),
+                _damo_fmt_str.format_permil(self.mid_permil, raw),
+                _damo_fmt_str.format_permil(self.low_permil, raw)),
+            ])
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return (type(self) == type(other) and self.metric == other.metric and
+                self.interval_us == other.interval_us and
+                self.high_permil == other.high_permil and
+                self.mid_permil == other.mid_permil and
+                self.low_permil == other.low_permil)
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        return DamosWatermarks(*[kv[x] for x in
+            ['metric', 'interval_us', 'high_permil', 'mid_permil',
+                'low_permil']])
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+                ('metric', self.metric),
+                ('interval_us', _damo_fmt_str.format_time_us_exact(
+                    self.interval_us, raw)),
+                ('high_permil',
+                    _damo_fmt_str.format_permil(self.high_permil, raw)),
+                ('mid_permil',
+                    _damo_fmt_str.format_permil(self.mid_permil, raw)),
+                ('low_permil',
+                    _damo_fmt_str.format_permil(self.low_permil, raw)),
+                ])
+
+class DamosFilter:
+    filter_type = None  # anon, active, memcg, young, hugepage_size, unmapped,
+                        # addr, or target
+    matching = None
+    allow = None
+    memcg_path = None
+    address_range = None    # DamonRegion
+    hugepage_size = None    # list of min/max hugepage size in bytes
+    damon_target_idx = None
+    scheme = None
+
+    def __init__(self, filter_type, matching, allow=False,
+                 memcg_path=None, address_range=None, damon_target_idx=None,
+                 hugepage_size=None):
+        self.filter_type = filter_type
+        self.matching = _damo_fmt_str.text_to_bool(matching)
+        self.memcg_path = memcg_path
+        self.allow = _damo_fmt_str.text_to_bool(allow)
+        self.address_range = address_range
+        if hugepage_size is not None:
+            if not type(hugepage_size) is list and len(hugepage_size) != 2:
+                raise Exception('wrong hugepage_size for DamosFilter()')
+            self.hugepage_size = [
+                    _damo_fmt_str.text_to_bytes(x) for x in hugepage_size]
+        if damon_target_idx != None:
+            self.damon_target_idx = _damo_fmt_str.text_to_nr(damon_target_idx)
+
+    def to_str(self, raw):
+        words = []
+        if self.allow:
+            words.append('allow')
+        else:
+            words.append('reject')
+        if self.matching is False:
+            words.append('none')
+        words.append(self.filter_type)
+        if self.filter_type in ['anon', 'active', 'young', 'unmapped']:
+            return ' '.join(words)
+        if self.filter_type == 'memcg':
+            return ' '.join(words + [self.memcg_path])
+        if self.filter_type == 'addr':
+            return ' '.join(words + [self.address_range.to_str(raw)])
+        if self.filter_type == 'target':
+            return ' '.join(words + [_damo_fmt_str.format_nr(
+                    self.damon_target_idx, raw)])
+        if self.filter_type == 'hugepage_size':
+            if self.hugepage_size is not None:
+                words.append(
+                        '[%s, %s]' %
+                        (_damo_fmt_str.format_sz(self.hugepage_size[0], raw),
+                         _damo_fmt_str.format_sz(self.hugepage_size[1], raw)))
+            return ' '.join(words)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and '%s' % self == '%s' % other
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        allow = False
+        if 'allow' in kv:
+            allow = kv['allow']
+        # filter_pass has renamed to allow
+        elif 'filter_pass' in kv:
+            allow = kv['filter_pass']
+        if 'hugepage_size' in kv:
+            hugepage_size = kv['hugepage_size']
+        else:
+            hugepage_size = None
+        return DamosFilter(
+                kv['filter_type'], kv['matching'],
+                allow,
+                kv['memcg_path'] if kv['filter_type'] == 'memcg' else '',
+                DamonRegion.from_kvpairs(kv['address_range'])
+                    if kv['filter_type'] == 'addr' else None,
+                kv['damon_target_idx']
+                    if kv['filter_type'] == 'target' else None,
+                    hugepage_size=hugepage_size)
+
+    def to_kvpairs(self, raw=False):
+        return collections.OrderedDict([
+            ('filter_type', self.filter_type),
+            ('matching', self.matching),
+            ('allow', self.allow),
+            ('memcg_path', self.memcg_path),
+            ('address_range', self.address_range.to_kvpairs(raw) if
+                self.address_range != None else None),
+            ('damon_target_idx',
+                _damo_fmt_str.format_nr(self.damon_target_idx, raw)
+                if self.damon_target_idx != None else None),
+            ('hugepage_size',
+             [_damo_fmt_str.format_sz(x, raw) for x in self.hugepage_size]
+             if self.hugepage_size is not None else None),
+            ])
+
+    def handled_by_ops(self):
+        # whether this filter is handled by DAMON operations set layer
+        return self.filter_type in ['anon', 'active', 'memcg', 'young',
+                                    'hugepage_size', 'unmapped']
+
+class DamosStats:
+    nr_tried = None
+    sz_tried = None
+    nr_applied = None
+    sz_applied = None
+    sz_ops_filter_passed = None
+    qt_exceeds = None
+    nr_snapshots = None
+    max_nr_snapshots = None
+
+    def __init__(self, nr_tried=0, sz_tried=0, nr_applied=0, sz_applied=0,
+                 sz_ops_filter_passed=0, qt_exceeds=0, nr_snapshots=0,
+                 max_nr_snapshots=0):
+        self.nr_tried = _damo_fmt_str.text_to_nr(nr_tried)
+        self.sz_tried = _damo_fmt_str.text_to_bytes(sz_tried)
+        self.nr_applied = _damo_fmt_str.text_to_nr(nr_applied)
+        self.sz_applied = _damo_fmt_str.text_to_bytes(sz_applied)
+        self.sz_ops_filter_passed = _damo_fmt_str.text_to_bytes(
+                sz_ops_filter_passed)
+        self.qt_exceeds = _damo_fmt_str.text_to_nr(qt_exceeds)
+        self.nr_snapshots = _damo_fmt_str.text_to_nr(nr_snapshots)
+        self.max_nr_snapshots = _damo_fmt_str.text_to_nr(max_nr_snapshots)
+
+    def to_str(self, raw):
+        return '\n'.join([
+            'tried %s times (%s)' % (
+                _damo_fmt_str.format_nr(self.nr_tried, raw),
+                _damo_fmt_str.format_sz(self.sz_tried, raw)),
+            'applied %s times (%s)' % (
+                _damo_fmt_str.format_nr(self.nr_applied, raw),
+                _damo_fmt_str.format_sz(self.sz_applied, raw)),
+            '%s passed filters' %
+            _damo_fmt_str.format_sz(self.sz_ops_filter_passed, raw),
+            'quota exceeded %s times' %
+            _damo_fmt_str.format_nr(self.qt_exceeds, raw),
+            _damo_fmt_str.format_sz(self.sz_ops_filter_passed, raw),
+            'tried %s snapshots (max %s)' %
+            (_damo_fmt_str.format_nr(self.nr_snapshots, raw),
+             _damo_fmt_str.format_nr(self.max_nr_snapshots, raw)),
+            ])
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def to_kvpairs(self, raw=False):
+        kv = collections.OrderedDict()
+        kv['nr_tried'] = _damo_fmt_str.format_nr(self.nr_tried, raw)
+        kv['sz_tried'] = _damo_fmt_str.format_sz(self.sz_tried, raw)
+        kv['nr_applied'] = _damo_fmt_str.format_nr(self.nr_applied, raw)
+        kv['sz_applied'] = _damo_fmt_str.format_sz(self.sz_applied, raw)
+        kv['sz_ops_filter_passed'] = _damo_fmt_str.format_sz(
+                self.sz_ops_filter_passed, raw)
+        kv['qt_exceeds'] = _damo_fmt_str.format_nr(self.qt_exceeds, raw)
+        kv['nr_snapshots'] = _damo_fmt_str.format_nr(self.nr_snapshots, raw)
+        kv['max_nr_snapshots'] = _damo_fmt_str.format_nr(
+                self.max_nr_snapshots, raw)
+        return kv
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        if 'nr_snapshots' in kv:
+            nr_snapshots = kv['nr_snapshots']
+        else:
+            nr_snapshots = 0
+        if 'max_nr_snapshots' in kv:
+            max_nr_snapshots = kv['max_nr_snapshots']
+        else:
+            max_nr_snapshots = 0
+        return cls(kv['nr_tried'], kv['sz_tried'],
+                   kv['nr_applied'], kv['sz_applied'],
+                   kv['sz_ops_filter_passed'], kv['qt_exceeds'],
+                   nr_snapshots=nr_snapshots,
+                   max_nr_snapshots=max_nr_snapshots)
+
+# TODO: check support of pageout and lru_(de)prio
+
+damos_action_willneed = 'willneed'
+damos_action_cold = 'cold'
+damos_action_pageout = 'pageout'
+damos_action_hugepage = 'hugepage'
+damos_action_collapse = 'collapse'
+damos_action_nohugepage = 'nohugepage'
+damos_action_lru_prio = 'lru_prio'
+damos_action_lru_deprio = 'lru_deprio'
+damos_action_migrate_hot = 'migrate_hot'
+damos_action_migrate_cold = 'migrate_cold'
+damos_action_stat = 'stat'
+
+damos_actions = [
+        damos_action_willneed,
+        damos_action_cold,
+        damos_action_pageout,
+        damos_action_hugepage,
+        damos_action_collapse,
+        damos_action_nohugepage,
+        damos_action_lru_prio,
+        damos_action_lru_deprio,
+        damos_action_migrate_hot,
+        damos_action_migrate_cold,
+        damos_action_stat,
+        ]
+
+def is_damos_migrate_action(action):
+    if action == damos_action_migrate_hot or \
+       action == damos_action_migrate_cold:
+        return True
+    return False
+
+class Damos:
+    access_pattern = None
+    action = None
+    target_nid = None
+    dests = None
+    apply_interval_us = None
+    quotas = None
+    watermarks = None
+    filters = None
+    stats = None
+    tried_regions = None
+    tried_bytes = None
+    context = None
+
+
+    # for monitoring only by default
+    def __init__(
+            self, access_pattern=None,
+            action=damos_action_stat, target_nid=None, apply_interval_us=None,
+            quotas=None, watermarks=None, filters=None, stats=None,
+            tried_regions=None, tried_bytes=None, dests=None):
+        self.access_pattern = (access_pattern
+                if access_pattern != None else DamosAccessPattern())
+        if not action in damos_actions:
+            raise Exception('wrong damos action: %s' % action)
+        self.action = action
+        self.dests = dests if dests is not None else []
+        self.target_nid = target_nid
+        if apply_interval_us != None:
+            self.apply_interval_us = _damo_fmt_str.text_to_us(
+                    apply_interval_us)
+        else:
+            self.apply_interval_us = 0
+        self.quotas = quotas if quotas != None else DamosQuotas()
+        self.quotas.scheme = self
+        self.watermarks = (watermarks
+                if watermarks != None else DamosWatermarks())
+        self.filters = filters if filters != None else []
+        for filter_ in self.filters:
+            filter_.scheme = self
+        self.stats = stats if stats != None else DamosStats()
+        self.tried_regions = tried_regions if tried_regions != None else []
+        for tried_region in self.tried_regions:
+            tried_region.scheme = self
+        self.tried_bytes = 0
+        if tried_bytes:
+            self.tried_bytes = _damo_fmt_str.text_to_bytes(
+                    tried_bytes)
+        else:
+            for region in self.tried_regions:
+                self.tried_bytes += region.size()
+
+    def str_action_line(self, raw):
+        action_words = ['action: %s' % self.action]
+        if is_damos_migrate_action(self.action):
+            action_words.append('to node %s' % self.target_nid)
+        action_words.append('per %s' %
+            _damo_fmt_str.format_time_us(self.apply_interval_us, raw)
+            if self.apply_interval_us != 0 else 'per aggr interval')
+        return ' '.join(action_words)
+
+    def to_str(self, raw, params_only=False, omit_tried_regions=False):
+        lines = [self.str_action_line(raw)]
+        if self.access_pattern is not None:
+            lines.append('target access pattern')
+            lines.append(_damo_fmt_str.indent_lines(
+                self.access_pattern.to_str(raw), 4))
+        for dest in self.dests:
+            lines.append('dest %d weight %d' % (dest.id, dest.weight))
+        if self.quotas is not None:
+            lines.append('quotas')
+            lines.append(_damo_fmt_str.indent_lines(
+                self.quotas.to_str(raw, params_only), 4))
+        if self.watermarks is not None:
+            lines.append('watermarks')
+            lines.append(_damo_fmt_str.indent_lines(
+                self.watermarks.to_str(raw), 4))
+        for idx, damos_filter in enumerate(self.filters):
+            lines.append('filter %d' % idx)
+            lines.append(_damo_fmt_str.indent_lines(
+                damos_filter.to_str(raw), 4))
+        if params_only is False and self.stats is not None:
+            lines.append('statistics')
+            lines.append(_damo_fmt_str.indent_lines(self.stats.to_str(raw), 4))
+        if params_only is False and omit_tried_regions is False and \
+                self.tried_regions is not None:
+            lines.append('tried regions (%s)' % _damo_fmt_str.format_sz(
+                    self.tried_bytes, raw))
+            for region in self.tried_regions:
+                lines.append(_damo_fmt_str.indent_lines(region.to_str(raw), 4))
+        return '\n'.join(lines)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __eq__(self, other):
+        return (type(self) == type(other) and
+                self.access_pattern == other.access_pattern and
+                self.action == other.action and
+                self.dests == other.dests and
+                self.apply_interval_us == other.apply_interval_us and
+                self.quotas == other.quotas and
+                self.watermarks == other.watermarks and
+                self.filters == other.filters)
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        filters = []
+        if 'filters' in kv:
+            for damos_filter_kv in kv['filters']:
+                filters.append(DamosFilter.from_kvpairs(damos_filter_kv))
+        dests = []
+        if 'dests' in kv:
+            for dest_kv in kv['dests']:
+                dests.append(DamosDest.from_kvpairs(dest_kv))
+        return Damos(DamosAccessPattern.from_kvpairs(kv['access_pattern'])
+                    if 'access_pattern' in kv else DamosAccessPattern(),
+                kv['action'] if 'action' in kv else damos_action_stat,
+                kv['target_nid'] if 'target_nid' in kv else None,
+                kv['apply_interval_us'] if 'apply_interval_us' in kv else None,
+                DamosQuotas.from_kvpairs(kv['quotas'])
+                    if 'quotas' in kv else DamosQuotas(),
+                DamosWatermarks.from_kvpairs(kv['watermarks'])
+                    if 'watermarks' in kv else DamosWatermarks(),
+                filters,
+                None, None, dests=dests)
+
+    def to_kvpairs(self, raw=False, omit_defaults=False, params_only=False):
+        kv = collections.OrderedDict()
+        kv['action'] = self.action
+        kv['dests'] = [dest.to_kvpairs(raw) for dest in self.dests]
+        if is_damos_migrate_action(self.action):
+            kv['target_nid'] = self.target_nid
+        if not omit_defaults or self.access_pattern != DamosAccessPattern():
+            kv['access_pattern'] = self.access_pattern.to_kvpairs(raw)
+        kv['apply_interval_us'] = _damo_fmt_str.format_time_us(self.apply_interval_us, raw)
+        if not omit_defaults or self.quotas != DamosQuotas():
+            kv['quotas'] = self.quotas.to_kvpairs(raw)
+        if not omit_defaults or self.watermarks != DamosWatermarks():
+            kv['watermarks'] = self.watermarks.to_kvpairs(raw)
+        if not omit_defaults or self.filters != []:
+            filters = []
+            for damos_filter in self.filters:
+                filters.append(damos_filter.to_kvpairs(raw))
+            kv['filters'] = filters
+        if not params_only and self.stats is not None:
+            kv['stats'] = self.stats.to_kvpairs(raw)
+        return kv
+
+    def effectively_equal(self, other, intervals):
+        return (type(self) == type(other) and
+                self.access_pattern.effectively_equal(
+                    other.access_pattern, intervals) and
+                self.action == other.action and
+                self.dests == other.dests and
+                self.apply_interval_us == other.apply_interval_us and
+                self.quotas == other.quotas and
+                self.watermarks == other.watermarks and
+                self.filters == other.filters)
+
+class DamonCtx:
+    ops = None
+    ops_attrs = None
+    addr_unit = None
+    targets = None
+    intervals = None
+    nr_regions = None
+    probes = None
+    sample_control = None
+    pause = None
+    schemes = None
+    kdamond = None
+
+    def __init__(self, ops='paddr', targets=None, intervals=None,
+                 nr_regions=None, schemes=None, ops_attrs=None,
+                 sample_control=None, addr_unit=None, pause=None, probes=None):
+        self.ops = ops
+        self.ops_attrs = ops_attrs if ops_attrs is not None else OpsAttrs()
+        if addr_unit is None:
+            self.addr_unit = 1
+        else:
+            self.addr_unit = _damo_fmt_str.text_to_bytes(addr_unit)
+        self.targets = targets if targets is not None else []
+        for target in self.targets:
+            target.context = self
+        self.intervals = (intervals
+                          if intervals is not None else DamonIntervals())
+        self.nr_regions = (nr_regions if nr_regions is not None
+                           else DamonNrRegionsRange())
+        if probes is None:
+            probes = []
+        self.probes = probes
+        if sample_control is None:
+            sample_control = DamonSampleControl()
+        self.sample_control = sample_control
+        if pause is None:
+            pause = False
+        self.pause = _damo_fmt_str.text_to_bool(pause)
+        self.schemes = schemes if schemes is not None else []
+        for scheme in self.schemes:
+            scheme.context = self
+
+    def add_probes_str(self, lines, raw):
+        if len(self.probes) == 0:
+            return
+        if len(self.probes) == 1:
+            lines.append('probe %s' % self.probes[0].to_str(raw))
+            return
+        lines.append('probes')
+        for idx, probe in enumerate(self.probes):
+            lines.append('- %s' % probe.to_str(raw))
+
+    def to_str(self, raw, params_only=False, omit_damos_tried_regions=False):
+        ops_line_tokens = ['ops: %s' % self.ops]
+        if self.ops_attrs.use_reports:
+            ops_line_tokens.append('use_reports')
+            ops_line_tokens.append('cpus %s' % self.ops_attrs.cpus)
+            ops_line_tokens.append('threads %s' % self.ops_attrs.tids)
+        if self.ops_attrs.write_only:
+            ops_line_tokens.append('write-only')
+        if self.addr_unit != 1:
+            ops_line_tokens.append(
+                    'addr_unit %s' % _damo_fmt_str.format_sz_accurate(
+                        self.addr_unit, raw))
+        lines = [' '.join(ops_line_tokens)]
+        self.add_probes_str(lines, raw)
+        if self.pause is True:
+            lines.append('pause: True')
+        for idx, target in enumerate(self.targets):
+            lines.append('target %d' % idx)
+            lines.append(_damo_fmt_str.indent_lines(target.to_str(raw), 4))
+        intervals_lines = self.intervals.to_str(raw).split('\n')
+        if len(intervals_lines) == 1:
+            lines.append('intervals: %s' % intervals_lines[0])
+        else:
+            lines.append('intervals')
+            lines.append(
+                    _damo_fmt_str.indent_lines(self.intervals.to_str(raw), 4))
+        lines.append('nr_regions: %s' % self.nr_regions.to_str(raw))
+        for idx, scheme in enumerate(self.schemes):
+            lines.append('scheme %d' % idx)
+            lines.append(_damo_fmt_str.indent_lines(
+                scheme.to_str(raw, params_only, omit_damos_tried_regions), 4))
+        lines.append('access sample control')
+        lines.append('%s' % self.sample_control.to_str(raw))
+        return '\n'.join(lines)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and '%s' % self == '%s' % other
+
+    def __hash__(self):
+        return hash(self.__str__())
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        if 'sample_control' in kv:
+            sample_control = DamonSampleControl.from_kvpairs(
+                    kv['sample_control'])
+        else:
+            sample_control = DamonSampleControl()
+        addr_unit = kv.get('addr_unit', 1)
+        pause = _damo_fmt_str.text_to_bool(kv.get('pause', False))
+        probes = [DamonProbe.from_kvpairs(probe_kv)
+                  for probe_kv in kv.get('probes', [])]
+        ctx = DamonCtx(
+                kv['ops'],
+                [DamonTarget.from_kvpairs(t) for t in kv['targets']],
+                DamonIntervals.from_kvpairs(kv['intervals'])
+                    if 'intervals' in kv else DamonIntervals(),
+                DamonNrRegionsRange.from_kvpairs(kv['nr_regions'])
+                    if 'nr_regions' in kv else DamonNrRegionsRange(),
+                [Damos.from_kvpairs(s) for s in kv['schemes']]
+                    if 'schemes' in kv else [],
+                probes=probes,
+                sample_control=sample_control,
+                addr_unit=addr_unit,
+                pause=pause)
+        return ctx
+
+    def to_kvpairs(self, raw=False, omit_defaults=False, params_only=False):
+        kv = collections.OrderedDict({})
+        kv['ops'] = self.ops
+        kv['addr_unit'] = _damo_fmt_str.format_sz_accurate(self.addr_unit, raw)
+        kv['targets'] = [t.to_kvpairs(raw) for t in self.targets]
+        if not omit_defaults or self.intervals != DamonIntervals():
+            kv['intervals'] = self.intervals.to_kvpairs(raw)
+        if not omit_defaults or self.nr_regions != DamonNrRegionsRange():
+            kv['nr_regions'] = self.nr_regions.to_kvpairs(raw)
+        kv['probes'] = [probe.to_kvpairs(raw) for probe in self.probes]
+        kv['sample_control'] = self.sample_control.to_kvpairs(raw)
+        kv['pause'] = self.pause
+        kv['schemes'] = [s.to_kvpairs(raw, omit_defaults, params_only)
+                         for s in self.schemes]
+        return kv
+
+def target_has_pid(ops):
+    return ops in ['vaddr', 'fvaddr']
+
+def target_regions_fixed(ops):
+    return ops in ['fvaddr', 'paddr']
+
+class Kdamond:
+    state = None
+    pid = None
+    refresh_ms = None
+    contexts = None
+    interface = None    # interface that was used for creating this kdamond
+
+    def __init__(self, state, pid, contexts, refresh_ms=0):
+        self.state = state
+        self.pid = pid
+        self.refresh_ms = _damo_fmt_str.text_to_ms(refresh_ms)
+        self.contexts = contexts
+        for ctx in self.contexts:
+            ctx.kdamond = self
+
+    def summary_str(self, show_cpu=False, params_only=False,
+                    omit_defaults=False, raw_number=False):
+        words = []
+        if params_only is False and self.state is not None:
+            words.append('state: %s' % self.state)
+        if params_only is False and self.pid is not None:
+            words.append('pid: %s' % self.pid)
+        if self.refresh_ms != 0:
+            words.append('stats refresh per: %s' %
+                         _damo_fmt_str.format_time_ms(
+                             self.refresh_ms, raw_number))
+        if show_cpu:
+            words.append('cpu usage: %s' % self.get_cpu_usage())
+        return ', '.join(words)
+
+    def to_str(self, raw, show_cpu=False, params_only=False,
+               omit_damos_tried_regions=False):
+        lines = []
+        summary_line = self.summary_str(show_cpu, params_only,
+                                        omit_defaults=False, raw_number=raw)
+        if summary_line != '':
+            lines.append(summary_line)
+        for idx, ctx in enumerate(self.contexts):
+            lines.append('context %d' % idx)
+            lines.append(_damo_fmt_str.indent_lines(
+                ctx.to_str(raw, params_only, omit_damos_tried_regions), 4))
+        return '\n'.join(lines)
+
+    def __str__(self):
+        return self.to_str(False)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and '%s' % self == '%s' % other
+
+    def __hash__(self):
+        return hash(self.__str__())
+
+    def get_cpu_usage(self):
+        if self.state == "off":
+            return "0.0"
+        try:
+            res = subprocess.check_output(['ps', '-p', self.pid, '-o', '%cpu'], text=True)
+            return res.split("\n")[1].strip()
+        except:
+            return 'error'
+
+    @classmethod
+    def from_kvpairs(cls, kv):
+        return Kdamond(
+                kv['state'] if 'state' in kv else 'off',
+                kv['pid'] if 'pid' in kv else None,
+                [DamonCtx.from_kvpairs(c) for c in kv['contexts']],
+                refresh_ms=kv['refresh_ms'] if 'refresh_ms' in kv else 0,
+                )
+
+    def to_kvpairs(self, raw=False, omit_defaults=False, params_only=False):
+        kv = collections.OrderedDict()
+        if not params_only:
+            kv['state'] = self.state
+            kv['pid'] = self.pid
+        kv['refresh_ms'] = self.refresh_ms
+        kv['contexts'] = [c.to_kvpairs(raw, omit_defaults, params_only)
+                          for c in self.contexts]
+        return kv
+
+import _damo_fs
+import _damo_sysinfo
+import _damon_dbgfs
+import _damon_sysfs
+
+_damon_fs = None
+
+def ensure_root_permission():
+    if os.geteuid() != 0:
+        print('Run as root')
+        exit(1)
+
+def set_damon_interface(damon_interface):
+    global _damon_fs
+    if damon_interface == 'sysfs':
+        _damon_fs = _damon_sysfs
+    elif damon_interface == 'debugfs':
+        _damon_fs = _damon_dbgfs
+    elif damon_interface == 'auto':
+        if _damon_sysfs.supported():
+            _damon_fs = _damon_sysfs
+        else:
+            _damon_fs = _damon_dbgfs
+    if not _damon_fs.supported():
+        return 'DAMON interface (%s) not supported' % damon_interface
+    return None
+
+damon_unavail_msg = '''
+DAMON is not available on this system.  Ask help to your sysadmin or DAMON
+community.
+
+To ask help to DAMON community, you can
+- send a mail to the mailing list (damon@lists.linux.dev),
+- open a damo GitHub issue (https://github.com/damonitor/damo/issues), or
+- send a mail to DAMON maintainer: sj@kernel.org
+'''
+
+def initialize(damon_interface, debug_damon, load_sysinfo):
+    if debug_damon:
+        _damo_fs.debug_print_ops(True)
+    err = set_damon_interface(damon_interface)
+    if err is not None:
+        return err
+    if load_sysinfo:
+        sysinfo, err = _damo_sysinfo.get_sysinfo()
+        if err is not None:
+            return err
+        version, err = sysinfo.infer_damon_version()
+        if version == '<5.15':
+            return damon_unavail_msg
+
+    return None
+
+initialized = False
+def ensure_initialized(args, load_sysinfo):
+    global initialized
+
+    if initialized:
+        return
+    err = initialize(
+            args.damon_interface_DEPRECATED, args.debug_damon, load_sysinfo)
+    if err != None:
+        print(err)
+        exit(1)
+    initialized = True
+
+def ensure_root_and_initialized(args, load_sysinfo=True):
+    ensure_root_permission()
+    ensure_initialized(args, load_sysinfo)
+
+# DAMON control
+
+def stage_kdamonds(kdamonds):
+    return _damon_fs.stage_kdamonds(kdamonds)
+
+def stage_kdamonds_targets(kdamonds):
+    if _damon_fs == _damon_dbgfs:
+        return 'debugfs interface does not support stage_kdamonds_target'
+    return _damon_fs.stage_kdamonds_targets(kdamonds)
+
+def commit_staged(kdamond_idxs):
+    if _damon_fs == _damon_dbgfs:
+        return 'debugfs interface does not support commit_staged()'
+    return _damon_fs.commit_staged(kdamond_idxs)
+
+def commit_quota_goals(kdamond_idxs):
+    if _damon_fs == _damon_dbgfs:
+        return 'debugfs interface does not support commit_quota_goals()'
+    return _damon_fs.commit_quota_goals(kdamond_idxs)
+
+def cleanup_obsolete_targets(kdamonds):
+    '''
+    When obsolete targets are committed to DAMON, DAMON removes the obsolete
+    ones inside kernel, but leave the sysfs files as is.  Cleanup the obsolete
+    sysfs files by staging only non-obsolete targets again.
+    '''
+    need_cleanup = False
+    for kd in kdamonds:
+        for ctx in kd.contexts:
+            for target in ctx.targets:
+                if target.obsolete:
+                    need_cleanup = True
+            ctx.targets = [t for t in ctx.targets if not t.obsolete]
+    if not need_cleanup:
+        return None
+    return stage_kdamonds(kdamonds)
+
+def commit(kdamonds, commit_quota_goals_only=False, commit_targets_only=False):
+    if not commit_quota_goals_only and not commit_targets_only:
+        err = stage_kdamonds(kdamonds)
+        if err:
+            return 'staging updates failed (%s)' % err
+    elif commit_targets_only:
+        err = stage_kdamonds_targets(kdamonds)
+        if err:
+            return 'staging target updates failed (%s)' % err
+
+    kdamond_idxs = ['%s' % idx for idx, k in enumerate(kdamonds)]
+
+    if commit_quota_goals_only:
+        err = commit_quota_goals(kdamond_idxs)
+        if err:
+            return 'commit quotas failed (%s)' % err
+        return None
+
+    err = commit_staged(kdamond_idxs)
+    if err:
+        return 'commit staged updates filed (%s)' % err
+
+    err = cleanup_obsolete_targets(kdamonds)
+    if err is not None:
+        return 'obsolte targets cleanup failed (%s)' % err
+
+    return None
+
+def update_tuned_intervals(kdamond_idxs=None):
+    if kdamond_idxs is None:
+        kdamond_idxs = running_kdamond_idxs()
+    if _damon_fs == _damon_dbgfs:
+        return None
+    err = _damon_fs.update_tuned_intervals(kdamond_idxs)
+    # 'Invalid argument' means the feature is not supported on the kernel
+    if err is not None and not 'Invalid argument' in err:
+        return err
+    return None
+
+def update_schemes_stats(kdamond_idxs=None):
+    if kdamond_idxs == None:
+        kdamond_idxs = running_kdamond_idxs()
+    return _damon_fs.update_schemes_stats(kdamond_idxs)
+
+def update_schemes_tried_bytes(kdamond_idxs=None):
+    if kdamond_idxs == None:
+        kdamond_idxs = running_kdamond_idxs()
+    return _damon_fs.update_schemes_tried_bytes(kdamond_idxs)
+
+def update_schemes_tried_regions(kdamond_idxs=None):
+    if not _damo_sysinfo.damon_feature_available(
+            'sysfs/schemes_tried_regions'):
+        return 'DAMON feature \'schemes_tried_regions\' is not supported' \
+                ' on the current kernel.  ' \
+                'It is available on kernel version 6.2 and later'
+    if kdamond_idxs == None:
+        kdamond_idxs = running_kdamond_idxs()
+    return _damon_fs.update_schemes_tried_regions(kdamond_idxs)
+
+def update_schemes_quota_effective_bytes(kdamond_idxs=None):
+    if kdamond_idxs == None:
+        kdamond_idxs = running_kdamond_idxs()
+    return _damon_fs.update_schemes_quota_effective_bytes(kdamond_idxs)
+
+def update_schemes_status(stats=True, tried_regions=True,
+                          quota_effective_bytes=False):
+    '''Returns error string or None'''
+    schemes_exist = False
+    for kdamond in current_kdamonds():
+        for ctx in kdamond.contexts:
+            if len(ctx.schemes) > 0:
+                schemes_exist = True
+                break
+        if schemes_exist is True:
+            break
+    if schemes_exist is False:
+        return None
+
+    idxs = running_kdamond_idxs()
+    if len(idxs) == 0:
+        return None
+    if stats:
+        err = update_schemes_stats(idxs)
+        if err != None:
+            return err
+    if tried_regions and _damo_sysinfo.damon_feature_available(
+            'sysfs/schemes_tried_regions'):
+        err = update_schemes_tried_regions(idxs)
+        if err != None:
+            return err
+
+    if quota_effective_bytes and _damo_sysinfo.damon_feature_available(
+            'sysfs/schemes_quota_effective_bytes'):
+        return update_schemes_quota_effective_bytes(idxs)
+
+    return None
+
+def get_childs_pids(pid):
+    try:
+        childs_pids = subprocess.check_output(
+                ['ps', '--ppid', pid, '-o', 'pid=']
+                ).decode().split()
+    except:
+        childs_pids = []
+
+    ret = childs_pids
+    for child_pid in childs_pids:
+        childs_childs_pids = get_childs_pids(child_pid)
+        ret.extend(childs_childs_pids)
+
+    return ret
+
+def pid_running(pid):
+    try:
+        subprocess.check_output(['ps', '--pid', '%s' % pid])
+        return True
+    except:
+        return False
+
+def best_effort_target_arrange(updated_targets, new_targets):
+    '''
+    Targets arrangement for kernels not supporting obsolete_target feature.
+
+    On the kernel, users cannot specify whether a target is obsolete.  Remove
+    those.  Also, DAMON will inherit monitoring results of targets of same
+    index.  Try to keep existing targets have same index as a best effort.
+    '''
+    for idx, old_target in enumerate(updated_targets):
+        if old_target.obsolete and len(new_targets) > 0:
+            updated_targets[idx] = new_targets[0]
+            new_targets = new_targets[1:]
+            # todo: the new target will unnecessarily inherit old target's
+            # monitoring results.  Avoid it if possible.
+    if len(new_targets) > 0:
+        return updated_targets + new_targets
+    # todo: try to further keep the index
+    return [t for t in updated_targets if t.obsolete is False]
+
+def add_vaddr_child_targets(ctx):
+    '''
+    Returns whether a change is made, and old targets list if a change was made
+    '''
+    if not target_has_pid(ctx.ops):
+        return False, None
+    if target_regions_fixed(ctx.ops):
+        return False, None
+
+    changes_made = False
+    orig_targets = ctx.targets
+    updated_targets = []
+    child_targets = []
+    for orig_target in orig_targets:
+        updated_targets.append(DamonTarget(pid=orig_target.pid, regions=[]))
+        if not pid_running(orig_target.pid):
+            updated_targets[-1].obsolete = True
+            changes_made = True
+        for child_pid in get_childs_pids('%s' % orig_target.pid):
+            child_targets.append(DamonTarget(pid=child_pid, regions=[]))
+            changes_made = True
+    if changes_made:
+        if _damo_sysinfo.damon_feature_available('sysfs/obsolete_target'):
+            ctx.targets = updated_targets + child_targets
+        else:
+            ctx.targets = best_effort_target_arrange(
+                    updated_targets, child_targets)
+    return changes_made, orig_targets
+
+def add_commit_vaddr_child_targets(kdamonds):
+    need_commit = False
+    old_targets_list = []
+    for kd in kdamonds:
+        for ctx in kd.contexts:
+            ctx = kdamonds[0].contexts[0]
+            need_commit_, old_targets = add_vaddr_child_targets(ctx)
+            if need_commit_ is True:
+                need_commit = True
+            old_targets_list.append(old_targets)
+    if not need_commit:
+        return
+    err = commit(kdamonds, commit_targets_only=True)
+    if err is not None:
+        idx = 0
+        for kd in kdamonds:
+            for ctx in kd.contexts:
+                ctx.targets = old_targets_list[idx]
+                idx += 1
+        return 'commit failed (%s)' % err
+
+    return None
+
+def turn_damon_on(kdamonds_idxs):
+    err = _damon_fs.turn_damon_on(kdamonds_idxs)
+    if err:
+        return err
+    wait_kdamonds_turned_on()
+
+def turn_damon_off(kdamonds_idxs):
+    err = _damon_fs.turn_damon_off(kdamonds_idxs)
+    if err:
+        return err
+    wait_kdamonds_turned_off()
+
+# DAMON status reading
+
+def is_kdamond_running(kdamond_idx):
+    return _damon_fs.is_kdamond_running(kdamond_idx)
+
+def current_kdamonds():
+    return _damon_fs.current_kdamonds()
+
+def update_read_kdamonds(
+        nr_retries=0, update_stats=True, update_tried_regions=True,
+        update_quota_effective_bytes=False, do_update_tuned_intervals=False):
+    err = 'assumed error'
+    nr_tries = 0
+    while True:
+        if do_update_tuned_intervals:
+            err = update_tuned_intervals()
+            if err is not None:
+                nr_tries += 1
+                time.sleep(
+                        random.randrange(2**(nr_tries - 1), 2**nr_tries) / 100)
+                continue
+        err = update_schemes_status(update_stats, update_tried_regions,
+                                    update_quota_effective_bytes)
+        nr_tries += 1
+        if err == None or nr_tries > nr_retries:
+            break
+        time.sleep(random.randrange(2**(nr_tries - 1), 2**nr_tries) / 100)
+    if err:
+        return None, err
+    return current_kdamonds(), None
+
+def nr_kdamonds():
+    return _damon_fs.nr_kdamonds()
+
+def running_kdamond_idxs():
+    return [idx for idx in range(nr_kdamonds())
+            if is_kdamond_running(idx)]
+
+def any_kdamond_running():
+    for idx in range(nr_kdamonds()):
+        if is_kdamond_running(idx):
+            return True
+    return False
+
+def wait_kdamonds_turned_on():
+    for idx in range(nr_kdamonds()):
+        while not is_kdamond_running(idx):
+            time.sleep(1)
+
+def wait_kdamonds_turned_off():
+    for idx in range(nr_kdamonds()):
+        while is_kdamond_running(idx):
+            time.sleep(1)
