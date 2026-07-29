@@ -1,0 +1,41 @@
+Loading GT: /tmp/gt.log
+  99 accesses, 1 region(s)
+  DAMON base: 0x7aeea1eb9000
+  DAMON max:  0x7aeea1eba000
+  DAMON span: 4096 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7aeea1eb9000  1 pages  resol=10×1
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 10 1 --address_range 135165337374720 135165337378816 --output raw
+
+  scale: 0=9.2 Hz  ...  9=11.1 Hz
+
+  GT   — what memtest actually did
+  5
+  5
+  5
+  5
+  0
+  5
+  5
+  5
+  5
+  5
+
+  DAMON — what kernel observed
+  4
+  4
+  9
+  4
+  4
+  9
+  4
+  4
+  4
+  9
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      10.1       10.3  1.02  ████████████████████
+

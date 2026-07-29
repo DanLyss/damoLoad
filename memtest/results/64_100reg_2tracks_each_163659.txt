@@ -1,0 +1,50 @@
+Loading GT: make
+  319606 accesses, 100 region(s)
+  DAMON base: 0x7d7aa9d5b000
+
+═══════════════════════════════════════════════════════
+  Combined: 100 regions  addr span=169 MB  resol=20×20
+═══════════════════════════════════════════════════════
+  Running: damo report heatmap --resol 20 20 --output raw ...
+  damo report heatmap error:
+usage: damo report heatmap [-h] [--output <output>]
+                           [--input <file> [<file> ...]] [--kdamond_idx <int>]
+                           [--context_idx <int>] [--scheme_idx <int>]
+                           [--tid <id>] [--resol <resolution> <resolution>]
+                           [--time_range <nanoseconds> [<nanoseconds> ...]]
+                           [--draw_range {hottest,all}]
+                           [--address_range <address> [<address> ...]]
+                           [--abs_time] [--abs_addr] [--guide] [--guide_human]
+                           [--stdout_colorset {gray,flame,emotion}]
+                           [--stdout_skip_colorset_example] [--df_passed]
+                           [--sort_temperature]
+                           [--temperature_weights <frequency> <age>]
+                           [--interactive_edit]
+damo report heatmap: error: argument --input/-i: expected at least one argument
+
+
+  GT   — all regions by address
+  0=0.0 Hz  ...  9=13605.0 Hz
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+  90000000000000000002
+
+  DAMON data unavailable or empty.
+

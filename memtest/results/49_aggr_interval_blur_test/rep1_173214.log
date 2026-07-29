@@ -1,0 +1,132 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 49_aggr_interval_blur_test.json
+──────────────────────────────────────────────────────
+  duration  : 20s
+  heatmap   : 20 rows × 5 cols
+
+  regions (1):
+    [0]  5 pages  (20 KB)
+
+  tracks (2):
+    [0]  region=0  [0s – 20s]
+         spatial  : uniform
+         temporal : square  200 Hz  duty=0.5  T=0.2s  φ=0
+    [1]  region=0  [0s – 0s]
+         spatial  : uniform
+         temporal : square  200 Hz  duty=0.5  T=2.0s  φ=0
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/49_aggr_interval_blur_test.json)...
+    Waiting for memtest to initialize...
+    App PID: 28488
+    Region: 0x79202c4ed000-0x79202c4f2000  (dec: 133179089276928-133179089297408)
+    DAMON bounding box: 133179089276928-133179089297408
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 25s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 20s  |  DAMON recording: 25s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 28488
+Regions: 1
+  [0] 0x79202c4ed000-0x79202c4f2000  (5 pages, 20 KB)
+Tracks:   2
+Duration: 20.0 s
+GO
+
+Done: 1988 total accesses in 20.0 s → ground truth: /tmp/batch_gt_ZPN0oX.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_ZPN0oX.log
+  1988 accesses, 1 region(s)
+  DAMON base: 0x79202c4ed000
+  DAMON max:  0x79202c4f2000
+  DAMON span: 20480 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x79202c4ed000  5 pages  resol=20×5
+═══════════════════════════════════════════════════════
+  Running: /usr/local/bin/damo report heatmap --resol 20 5 --address_range 133179089276928 133179089297408 --output raw
+
+  scale: 0=10.1 Hz  ...  9=44.1 Hz
+
+  GT   — what memtest actually did
+  [38;5;238m2[0m[38;5;238m2[0m[38;5;235m1[0m[38;5;241m3[0m[38;5;250m6[0m
+  [38;5;247m5[0m[38;5;241m3[0m[38;5;241m3[0m[38;5;235m1[0m[38;5;238m2[0m
+  [38;5;244m4[0m[38;5;238m2[0m[38;5;238m2[0m[38;5;241m3[0m[38;5;238m2[0m
+  [38;5;238m2[0m[38;5;238m2[0m[38;5;238m2[0m[38;5;241m3[0m[38;5;244m4[0m
+  [38;5;238m2[0m[38;5;241m3[0m[38;5;241m3[0m[38;5;238m2[0m[38;5;238m2[0m
+  [38;5;241m3[0m[38;5;244m4[0m[38;5;238m2[0m[38;5;241m3[0m[38;5;238m2[0m
+  [38;5;247m5[0m[38;5;244m4[0m[38;5;238m2[0m[38;5;235m1[0m[38;5;235m1[0m
+  [38;5;247m5[0m[38;5;235m1[0m[38;5;241m3[0m[38;5;238m2[0m[38;5;238m2[0m
+  [38;5;241m3[0m[38;5;238m2[0m[38;5;244m4[0m[38;5;235m1[0m[38;5;244m4[0m
+  [38;5;238m2[0m[38;5;244m4[0m[38;5;247m5[0m[38;5;235m1[0m[38;5;238m2[0m
+  [38;5;238m2[0m[38;5;238m2[0m[38;5;241m3[0m[38;5;244m4[0m[38;5;241m3[0m
+  [38;5;238m2[0m[38;5;241m3[0m[38;5;244m4[0m[38;5;238m2[0m[38;5;238m2[0m
+  [38;5;241m3[0m[38;5;238m2[0m[38;5;241m3[0m[38;5;238m2[0m[38;5;244m4[0m
+  [38;5;244m4[0m[38;5;238m2[0m[38;5;238m2[0m[38;5;238m2[0m[38;5;241m3[0m
+  [38;5;238m2[0m[38;5;238m2[0m[38;5;232m0[0m[38;5;247m5[0m[38;5;241m3[0m
+  [38;5;238m2[0m[38;5;241m3[0m[38;5;238m2[0m[38;5;244m4[0m[38;5;238m2[0m
+  [38;5;241m3[0m[38;5;244m4[0m[38;5;238m2[0m[38;5;241m3[0m[38;5;235m1[0m
+  [38;5;238m2[0m[38;5;241m3[0m[38;5;244m4[0m[38;5;241m3[0m[38;5;235m1[0m
+  [38;5;241m3[0m[38;5;241m3[0m[38;5;238m2[0m[38;5;241m3[0m[38;5;238m2[0m
+  [38;5;238m2[0m[38;5;238m2[0m[38;5;241m3[0m[38;5;241m3[0m[38;5;241m3[0m
+
+  DAMON — what kernel observed
+  [38;5;238m2[0m[38;5;238m2[0m[38;5;250m6[0m[38;5;235m1[0m[38;5;247m5[0m
+  [38;5;241m3[0m[38;5;241m3[0m[1;38;5;255m8[0m[38;5;241m3[0m[38;5;253m7[0m
+  [38;5;241m3[0m[38;5;241m3[0m[1;38;5;255m8[0m[38;5;238m2[0m[38;5;253m7[0m
+  [38;5;238m2[0m[38;5;238m2[0m[38;5;250m6[0m[38;5;238m2[0m[1;38;5;255m8[0m
+  [38;5;241m3[0m[38;5;241m3[0m[38;5;250m6[0m[38;5;232m0[0m[38;5;247m5[0m
+  [38;5;241m3[0m[38;5;241m3[0m[1;38;5;255m8[0m[38;5;235m1[0m[38;5;250m6[0m
+  [38;5;241m3[0m[38;5;241m3[0m[1;38;5;255m8[0m[38;5;238m2[0m[38;5;247m5[0m
+  [38;5;238m2[0m[38;5;238m2[0m[38;5;250m6[0m[38;5;238m2[0m[1;38;5;255m8[0m
+  [38;5;241m3[0m[38;5;241m3[0m[38;5;253m7[0m[38;5;235m1[0m[38;5;250m6[0m
+  [38;5;238m2[0m[38;5;238m2[0m[1;38;5;255m8[0m[38;5;241m3[0m[38;5;253m7[0m
+  [38;5;235m1[0m[38;5;235m1[0m[38;5;250m6[0m[38;5;238m2[0m[38;5;253m7[0m
+  [38;5;241m3[0m[38;5;241m3[0m[38;5;253m7[0m[38;5;235m1[0m[38;5;253m7[0m
+  [38;5;235m1[0m[38;5;235m1[0m[38;5;250m6[0m[38;5;238m2[0m[38;5;253m7[0m
+  [38;5;238m2[0m[38;5;238m2[0m[38;5;253m7[0m[38;5;238m2[0m[38;5;253m7[0m
+  [38;5;235m1[0m[38;5;235m1[0m[38;5;250m6[0m[38;5;241m3[0m[1;38;5;255m8[0m
+  [38;5;241m3[0m[38;5;241m3[0m[1;38;5;255m8[0m[38;5;241m3[0m[1;38;5;255m8[0m
+  [38;5;238m2[0m[38;5;238m2[0m[38;5;253m7[0m[38;5;238m2[0m[38;5;247m5[0m
+  [38;5;232m0[0m[38;5;232m0[0m[38;5;250m6[0m[38;5;241m3[0m[38;5;253m7[0m
+  [38;5;238m2[0m[38;5;238m2[0m[38;5;253m7[0m[38;5;238m2[0m[38;5;253m7[0m
+  [38;5;241m3[0m[38;5;241m3[0m[1;97m9[0m[38;5;241m3[0m[1;38;5;255m8[0m
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      20.9       18.6  0.89  █████████████████
+     p1      19.9       18.6  0.93  ██████████████████
+     p2      19.7       36.5  1.85  ████████████████████
+     p3      19.7       17.9  0.91  ██████████████████
+     p4      19.8       35.3  1.79  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/49_aggr_interval_blur_test_173236.txt
