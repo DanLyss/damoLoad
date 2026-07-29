@@ -1,0 +1,164 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 40_cold_to_hot_to_cold.json
+──────────────────────────────────────────────────────
+  duration  : 30s
+  heatmap   : 30 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 30s]
+         spatial  : hotspot  pages=[0, 1, 2, 3, 4]  hot_ratio=0.9
+         temporal : steps  5Hz/5s  50Hz/5s  150Hz/5s  200Hz/5s  50Hz/5s  5Hz/5s
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/40_cold_to_hot_to_cold.json)...
+    Waiting for memtest to initialize...
+    App PID: 57849
+    Region: 0x79fea2994000-0x79fea299e000  (dec: 134134556606464-134134556647424)
+    DAMON bounding box: 134134556606464-134134556647424
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 35s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 30s  |  DAMON recording: 35s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 57849
+Regions: 1
+  [0] 0x79fea2994000-0x79fea299e000  (10 pages, 40 KB)
+Tracks:   1
+Duration: 30.0 s
+GO
+
+Done: 2311 total accesses in 30.0 s → ground truth: /tmp/batch_gt_iZBuaw.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_iZBuaw.log
+  2311 accesses, 1 region(s)
+  DAMON base: 0x79fea2994000
+  DAMON max:  0x79fea299e000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x79fea2994000  10 pages  resol=30×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 30 10 --address_range 134134556606464 134134556647424 --output raw
+
+  scale: 0=0.0 Hz  ...  9=60.7 Hz
+
+  GT   — what memtest actually did
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  1110100000
+  2111100000
+  2121100000
+  1111200000
+  1121100000
+  2221200000
+  4434300101
+  3553400111
+  4454400000
+  4345411010
+  4544400001
+  6557401100
+  5554611101
+  6563610010
+  5565601101
+  5565400111
+  1221100000
+  1122100000
+  2111100000
+  1121100000
+  1112100000
+  0000000000
+  0000000000
+  0000000000
+  0001000000
+  0000000000
+
+  DAMON — what kernel observed
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  1100100000
+  2211100000
+  3122100011
+  2211300000
+  1222200000
+  2222300000
+  5566511111
+  3666400000
+  6466400000
+  6466410000
+  4644601111
+  9766511100
+  6555711100
+  5766610000
+  4677702222
+  7566401111
+  3211300000
+  3133200000
+  3111300000
+  1311200000
+  1122100000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      14.0       17.2  1.23  ████████████████████
+     p1      14.1       16.6  1.18  ████████████████████
+     p2      15.0       16.6  1.11  ████████████████████
+     p3      13.3       16.6  1.25  ████████████████████
+     p4      13.9       17.1  1.23  ████████████████████
+     p5       1.2        1.4  1.23  ████████████████████
+     p6       1.1        2.3  2.08  ████████████████████
+     p7       1.8        2.3  1.30  ████████████████████
+     p8       1.6        1.9  1.16  ████████████████████
+     p9       1.7        1.9  1.11  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/40_cold_to_hot_to_cold_122000.txt

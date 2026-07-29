@@ -1,0 +1,137 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 39_ramp_with_hotspot.json
+──────────────────────────────────────────────────────
+  duration  : 20s
+  heatmap   : 20 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (2):
+    [0]  region=0  [0s – 20s]
+         spatial  : hotspot  pages=[0, 1]  hot_ratio=0.9
+         temporal : ramp  0→200 Hz
+    [1]  region=0  [0s – 20s]
+         spatial  : hotspot  pages=[8, 9]  hot_ratio=0.9
+         temporal : ramp  200→0 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/39_ramp_with_hotspot.json)...
+    Waiting for memtest to initialize...
+    App PID: 57162
+    Region: 0x7964ed130000-0x7964ed13a000  (dec: 133474381135872-133474381176832)
+    DAMON bounding box: 133474381135872-133474381176832
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 25s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 20s  |  DAMON recording: 25s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 57162
+Regions: 1
+  [0] 0x7964ed130000-0x7964ed13a000  (10 pages, 40 KB)
+Tracks:   2
+Duration: 20.0 s
+GO
+
+Done: 4002 total accesses in 20.0 s → ground truth: /tmp/batch_gt_C9qlxM.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_C9qlxM.log
+  4002 accesses, 1 region(s)
+  DAMON base: 0x7964ed130000
+  DAMON max:  0x7964ed13a000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7964ed130000  10 pages  resol=20×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 20 10 --address_range 133474381135872 133474381176832 --output raw
+
+  scale: 0=0.0 Hz  ...  9=110.3 Hz
+
+  GT   — what memtest actually did
+  0000000086
+  1100000067
+  1100000066
+  2100100056
+  2100000056
+  2200000066
+  3200000056
+  3300000055
+  4300000044
+  4300000044
+  4400000043
+  5400000033
+  4600000033
+  5500000032
+  6500000032
+  6600000021
+  6600000021
+  7600000011
+  6700000011
+  8600001000
+
+  DAMON — what kernel observed
+  0000001333
+  2110001339
+  2110011336
+  2331111338
+  4110000447
+  2220001336
+  3110000227
+  5220000335
+  4220000335
+  3220000225
+  4330000224
+  6330000334
+  5440000224
+  4220000224
+  6330000112
+  6330001112
+  6330010222
+  7330000112
+  6550000002
+  6330001001
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      48.0       52.7  1.10  ████████████████████
+     p1      45.0       28.2  0.63  ████████████
+     p2       2.2       28.2  12.81  ████████████████████
+     p3       2.3        2.9  1.25  ████████████████████
+     p4       2.0        2.9  1.44  ████████████████████
+     p5       2.8        3.2  1.15  ████████████████████
+     p6       3.2        4.4  1.38  ████████████████████
+     p7       2.7       26.9  9.97  ████████████████████
+     p8      45.6       26.9  0.59  ███████████
+     p9      46.4       53.6  1.16  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/39_ramp_with_hotspot_121705.txt

@@ -1,0 +1,119 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 32_hotspot_balanced.json
+──────────────────────────────────────────────────────
+  duration  : 15s
+  heatmap   : 15 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 15s]
+         spatial  : hotspot  pages=[0, 1, 2, 3, 4]  hot_ratio=0.5
+         temporal : const  150 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/32_hotspot_balanced.json)...
+    Waiting for memtest to initialize...
+    App PID: 53216
+    Region: 0x761ed150b000-0x761ed1515000  (dec: 129874732822528-129874732863488)
+    DAMON bounding box: 129874732822528-129874732863488
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 20s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 15s  |  DAMON recording: 20s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 53216
+Regions: 1
+  [0] 0x761ed150b000-0x761ed1515000  (10 pages, 40 KB)
+Tracks:   1
+Duration: 15.0 s
+GO
+
+Done: 2249 total accesses in 15.0 s → ground truth: /tmp/batch_gt_4OOgv2.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_4OOgv2.log
+  2249 accesses, 1 region(s)
+  DAMON base: 0x761ed150b000
+  DAMON max:  0x761ed1515000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x761ed150b000  10 pages  resol=15×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 15 10 --address_range 129874732822528 129874732863488 --output raw
+
+  scale: 0=6.2 Hz  ...  9=32.5 Hz
+
+  GT   — what memtest actually did
+  4532331332
+  4324522333
+  4143331324
+  2145332424
+  4334343330
+  4332153433
+  2244224433
+  3451353222
+  3352341243
+  5224341234
+  4232531352
+  1342533334
+  3425331323
+  2435514232
+  1414534432
+
+  DAMON — what kernel observed
+  5565335544
+  4447552522
+  2282774444
+  9948225622
+  5536552444
+  7761445633
+  3353443577
+  4462446333
+  4464220433
+  4424551499
+  4473552433
+  4452663577
+  3337772466
+  6647444233
+  5515555477
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      14.9       19.9  1.33  ████████████████████
+     p1      14.7       19.9  1.35  ████████████████████
+     p2      15.7       19.8  1.26  ████████████████████
+     p3      15.7       19.4  1.23  ████████████████████
+     p4      16.5       19.5  1.18  ████████████████████
+     p5      15.6       19.5  1.25  ████████████████████
+     p6      12.6       15.9  1.26  ████████████████████
+     p7      15.0       18.6  1.24  ████████████████████
+     p8      14.8       19.7  1.33  ████████████████████
+     p9      14.5       19.7  1.36  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/32_hotspot_balanced_120237.txt

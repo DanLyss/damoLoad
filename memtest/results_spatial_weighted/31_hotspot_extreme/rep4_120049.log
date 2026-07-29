@@ -1,0 +1,129 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 31_hotspot_extreme.json
+──────────────────────────────────────────────────────
+  duration  : 15s
+  heatmap   : 15 rows × 20 cols
+
+  regions (1):
+    [0]  20 pages  (80 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 15s]
+         spatial  : hotspot  pages=[0]  hot_ratio=0.99
+         temporal : const  200 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/31_hotspot_extreme.json)...
+    Waiting for memtest to initialize...
+    App PID: 52699
+    Region: 0x7d613493e000-0x7d6134952000  (dec: 137856447406080-137856447488000)
+    DAMON bounding box: 137856447406080-137856447488000
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 20s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 15s  |  DAMON recording: 20s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 52699
+Regions: 1
+  [0] 0x7d613493e000-0x7d6134952000  (20 pages, 80 KB)
+Tracks:   1
+Duration: 15.0 s
+GO
+
+Done: 2999 total accesses in 15.0 s → ground truth: /tmp/batch_gt_u1cyOx.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_u1cyOx.log
+  2999 accesses, 1 region(s)
+  DAMON base: 0x7d613493e000
+  DAMON max:  0x7d6134952000
+  DAMON span: 81920 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7d613493e000  20 pages  resol=15×20
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 15 20 --address_range 137856447406080 137856447488000 --output raw
+
+  scale: 0=0.0 Hz  ...  9=1070.3 Hz
+
+  GT   — what memtest actually did
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+  20000000000000000000
+
+  DAMON — what kernel observed
+  10000000000000000000
+  20000000000000000000
+  20000000000000000000
+  40000000000000000000
+  30000000000000000000
+  50000000000000000000
+  50000000000000000000
+  30000000000000000000
+  30000000000000000000
+  50000000000000000000
+  40000000000000000000
+  80000000000000000000
+  40000000000000000000
+  90000000000000000000
+  50000000000000000000
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0     197.9      496.0  2.51  ████████████████████
+     p1       0.3        0.9  2.79  ████████████████████
+     p2       0.3        0.9  3.49  ████████████████████
+     p3       0.1        0.4  5.39  ████████████████████
+     p4       0.0        0.4     —  
+     p5       0.1        0.3  4.32  ████████████████████
+     p6       0.1        0.1  1.07  ████████████████████
+     p7       0.1        0.2  3.23  ████████████████████
+     p8       0.2        0.2  1.08  ████████████████████
+     p9       0.1        0.1  1.08  ████████████████████
+    p10       0.3        0.1  0.27  █████
+    p11       0.0        0.0     —  
+    p12       0.1        0.1  2.15  ████████████████████
+    p13       0.1        0.1  2.15  ████████████████████
+    p14       0.1        0.1  0.54  ██████████
+    p15       0.0        0.1     —  
+    p16       0.2        0.3  1.43  ████████████████████
+    p17       0.1        0.3  2.15  ████████████████████
+    p18       0.0        0.0     —  
+    p19       0.1        0.0  0.00  
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/31_hotspot_extreme_120107.txt

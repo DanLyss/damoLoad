@@ -1,0 +1,134 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 29_gaussian_sine.json
+──────────────────────────────────────────────────────
+  duration  : 20s
+  heatmap   : 20 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 20s]
+         spatial  : gaussian  center=2.0  sigma=1.5
+         temporal : sine  80±60 Hz  T=3.0s  φ=0
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/29_gaussian_sine.json)...
+    Waiting for memtest to initialize...
+    App PID: 51521
+    Region: 0x7bffc3388000-0x7bffc3392000  (dec: 136338422136832-136338422177792)
+    DAMON bounding box: 136338422136832-136338422177792
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 25s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 20s  |  DAMON recording: 25s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 51521
+Regions: 1
+  [0] 0x7bffc3388000-0x7bffc3392000  (10 pages, 40 KB)
+Tracks:   1
+Duration: 20.0 s
+GO
+
+Done: 1642 total accesses in 20.0 s → ground truth: /tmp/batch_gt_ZqbErl.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_ZqbErl.log
+  1642 accesses, 1 region(s)
+  DAMON base: 0x7bffc3388000
+  DAMON max:  0x7bffc3392000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7bffc3388000  10 pages  resol=20×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 20 10 --address_range 136338422136832 136338422177792 --output raw
+
+  scale: 0=0.0 Hz  ...  9=45.9 Hz
+
+  GT   — what memtest actually did
+  4555411000
+  2343310000
+  1231010000
+  6465210000
+  3344100000
+  1131100000
+  5465210000
+  3254100000
+  1122100000
+  5465310000
+  2443110000
+  2121100000
+  5664210000
+  2443200000
+  1212100000
+  3674310000
+  2344210000
+  1222100000
+  4476210000
+  3353210000
+
+  DAMON — what kernel observed
+  6676640000
+  2231110000
+  3362210000
+  5566611000
+  2251100000
+  2242210000
+  6696600000
+  1143300000
+  1143310000
+  7785510000
+  2242210000
+  3333310000
+  7794410000
+  3342200000
+  2212210000
+  6686620000
+  3343300000
+  3331100000
+  4474410000
+  3352210000
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      14.2       18.5  1.30  ████████████████████
+     p1      16.4       18.5  1.13  ████████████████████
+     p2      21.6       27.0  1.25  ████████████████████
+     p3      16.9       16.3  0.96  ███████████████████
+     p4       8.9       16.3  1.82  ████████████████████
+     p5       3.1        4.5  1.43  ████████████████████
+     p6       1.0        1.0  1.01  ████████████████████
+     p7       0.1        0.1  1.07  ████████████████████
+     p8       0.0        0.1     —  
+     p9       0.0        0.0     —  
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/29_gaussian_sine_115713.txt

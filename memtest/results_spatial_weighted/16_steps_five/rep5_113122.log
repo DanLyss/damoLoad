@@ -1,0 +1,144 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 16_steps_five.json
+──────────────────────────────────────────────────────
+  duration  : 25s
+  heatmap   : 25 rows × 5 cols
+
+  regions (1):
+    [0]  5 pages  (20 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 25s]
+         spatial  : uniform
+         temporal : steps  10Hz/5s  50Hz/5s  100Hz/5s  150Hz/5s  200Hz/5s
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/16_steps_five.json)...
+    Waiting for memtest to initialize...
+    App PID: 44728
+    Region: 0x7469f2318000-0x7469f231d000  (dec: 127998383718400-127998383738880)
+    DAMON bounding box: 127998383718400-127998383738880
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 30s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 25s  |  DAMON recording: 30s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 44728
+Regions: 1
+  [0] 0x7469f2318000-0x7469f231d000  (5 pages, 20 KB)
+Tracks:   1
+Duration: 25.0 s
+GO
+
+Done: 2555 total accesses in 25.0 s → ground truth: /tmp/batch_gt_6Io2zY.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_6Io2zY.log
+  2555 accesses, 1 region(s)
+  DAMON base: 0x7469f2318000
+  DAMON max:  0x7469f231d000
+  DAMON span: 20480 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7469f2318000  5 pages  resol=25×5
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 25 5 --address_range 127998383718400 127998383738880 --output raw
+
+  scale: 0=0.0 Hz  ...  9=58.0 Hz
+
+  GT   — what memtest actually did
+  00001
+  00000
+  00000
+  00001
+  10011
+  12122
+  31201
+  22212
+  21221
+  22122
+  23344
+  34323
+  43332
+  44322
+  42433
+  45635
+  44654
+  44546
+  65435
+  54374
+  67675
+  66666
+  66775
+  65668
+  66586
+
+  DAMON — what kernel observed
+  00000
+  00011
+  00000
+  11000
+  11111
+  22233
+  22211
+  33344
+  22211
+  22133
+  44444
+  33333
+  44433
+  66344
+  66444
+  66744
+  55755
+  88699
+  77566
+  55477
+  99666
+  66877
+  77877
+  66888
+  88688
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      21.0       26.6  1.27  ████████████████████
+     p1      20.2       26.6  1.32  ████████████████████
+     p2      20.0       24.6  1.23  ████████████████████
+     p3      20.9       25.4  1.21  ████████████████████
+     p4      20.6       25.4  1.23  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/16_steps_five_113150.txt

@@ -1,0 +1,129 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 14_square_short_burst.json
+──────────────────────────────────────────────────────
+  duration  : 20s
+  heatmap   : 20 rows × 5 cols
+
+  regions (1):
+    [0]  5 pages  (20 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 20s]
+         spatial  : uniform
+         temporal : square  200 Hz  duty=0.05  T=1.0s  φ=0
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/14_square_short_burst.json)...
+    Waiting for memtest to initialize...
+    App PID: 43541
+    Region: 0x76201377f000-0x762013784000  (dec: 129880137658368-129880137678848)
+    DAMON bounding box: 129880137658368-129880137678848
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 25s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 20s  |  DAMON recording: 25s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 43541
+Regions: 1
+  [0] 0x76201377f000-0x762013784000  (5 pages, 20 KB)
+Tracks:   1
+Duration: 20.0 s
+GO
+
+Done: 197 total accesses in 20.0 s → ground truth: /tmp/batch_gt_SGhppg.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_SGhppg.log
+  197 accesses, 1 region(s)
+  DAMON base: 0x76201377f000
+  DAMON max:  0x762013784000
+  DAMON span: 20480 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x76201377f000  5 pages  resol=20×5
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 20 5 --address_range 129880137658368 129880137678848 --output raw
+
+  scale: 0=0.0 Hz  ...  9=6.3 Hz
+
+  GT   — what memtest actually did
+  03326
+  52325
+  23255
+  23306
+  33036
+  32353
+  35233
+  23235
+  30265
+  32255
+  35350
+  53225
+  62305
+  93022
+  53620
+  22903
+  52063
+  05335
+  53503
+  26522
+
+  DAMON — what kernel observed
+  41111
+  13133
+  21311
+  22022
+  41311
+  45122
+  12122
+  11122
+  40277
+  34244
+  23211
+  54100
+  61333
+  41022
+  43400
+  22811
+  21033
+  04333
+  43411
+  15400
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0       2.2        2.0  0.92  ██████████████████
+     p1       1.9        1.7  0.88  █████████████████
+     p2       1.9        1.6  0.85  █████████████████
+     p3       1.8        1.5  0.82  ████████████████
+     p4       2.5        1.5  0.58  ███████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/14_square_short_burst_112738.txt

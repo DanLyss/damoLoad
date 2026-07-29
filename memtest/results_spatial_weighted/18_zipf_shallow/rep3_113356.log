@@ -1,0 +1,119 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 18_zipf_shallow.json
+──────────────────────────────────────────────────────
+  duration  : 15s
+  heatmap   : 15 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 15s]
+         spatial  : zipf  s=0.5
+         temporal : const  150 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/18_zipf_shallow.json)...
+    Waiting for memtest to initialize...
+    App PID: 45566
+    Region: 0x723ac473c000-0x723ac4746000  (dec: 125596729589760-125596729630720)
+    DAMON bounding box: 125596729589760-125596729630720
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 20s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 15s  |  DAMON recording: 20s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 45566
+Regions: 1
+  [0] 0x723ac473c000-0x723ac4746000  (10 pages, 40 KB)
+Tracks:   1
+Duration: 15.0 s
+GO
+
+Done: 2249 total accesses in 15.0 s → ground truth: /tmp/batch_gt_gbnaWQ.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_gbnaWQ.log
+  2249 accesses, 1 region(s)
+  DAMON base: 0x723ac473c000
+  DAMON max:  0x723ac4746000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x723ac473c000  10 pages  resol=15×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 15 10 --address_range 125596729589760 125596729630720 --output raw
+
+  scale: 0=3.0 Hz  ...  9=51.2 Hz
+
+  GT   — what memtest actually did
+  7332112201
+  5342121211
+  5431311112
+  3433122112
+  5433212201
+  6323221121
+  4431222111
+  6423211111
+  5422311211
+  6322211112
+  5333212121
+  4433121212
+  5342212102
+  5441221201
+  4233322111
+
+  DAMON — what kernel observed
+  7533111113
+  5666222221
+  6622221113
+  6344114113
+  7433332221
+  8433442331
+  5455223222
+  7822442111
+  7633112222
+  7433222332
+  6433223331
+  5344222112
+  9555222113
+  7522112114
+  5433552221
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      29.6       37.1  1.26  ████████████████████
+     p1      21.7       28.5  1.31  ████████████████████
+     p2      18.8       21.5  1.14  ████████████████████
+     p3      15.1       21.5  1.42  ████████████████████
+     p4      13.6       15.8  1.16  ████████████████████
+     p5      10.8       15.8  1.46  ████████████████████
+     p6      11.1       14.2  1.27  ████████████████████
+     p7      10.9       12.7  1.17  ████████████████████
+     p8       7.8       12.7  1.63  ████████████████████
+     p9      10.6       13.8  1.30  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/18_zipf_shallow_113414.txt

@@ -1,0 +1,134 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 34_all_pages_square.json
+──────────────────────────────────────────────────────
+  duration  : 20s
+  heatmap   : 20 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 20s]
+         spatial  : all
+         temporal : square  150 Hz  duty=0.4  T=2.0s  φ=0
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/34_all_pages_square.json)...
+    Waiting for memtest to initialize...
+    App PID: 54075
+    Region: 0x75378db98000-0x75378dba2000  (dec: 128881461395456-128881461436416)
+    DAMON bounding box: 128881461395456-128881461436416
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 25s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 20s  |  DAMON recording: 25s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 54075
+Regions: 1
+  [0] 0x75378db98000-0x75378dba2000  (10 pages, 40 KB)
+Tracks:   1
+Duration: 20.0 s
+GO
+
+Done: 11970 total accesses in 20.0 s → ground truth: /tmp/batch_gt_psThxJ.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_psThxJ.log
+  11970 accesses, 1 region(s)
+  DAMON base: 0x75378db98000
+  DAMON max:  0x75378dba2000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x75378db98000  10 pages  resol=20×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 20 10 --address_range 128881461395456 128881461436416 --output raw
+
+  scale: 0=0.0 Hz  ...  9=457.1 Hz
+
+  GT   — what memtest actually did
+  2222222222
+  0000000000
+  3333333333
+  0000000000
+  2222222222
+  0000000000
+  2222222222
+  1111111111
+  1111111111
+  1111111111
+  1111111111
+  1111111111
+  1111111111
+  2222222222
+  0000000000
+  2222222222
+  0000000000
+  3333333333
+  0000000000
+  3333333333
+
+  DAMON — what kernel observed
+  2222222222
+  1111111111
+  3333333333
+  2222222222
+  2222222442
+  1111111111
+  2222222224
+  1111111111
+  3336666666
+  1111111111
+  6666666666
+  1111111111
+  6666666666
+  0000000000
+  8888888888
+  0000000000
+  9999994999
+  0000000000
+  9999999999
+  0000000000
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      63.7      149.2  2.34  ████████████████████
+     p1      63.7      149.2  2.34  ████████████████████
+     p2      63.7      149.2  2.34  ████████████████████
+     p3      63.7      156.8  2.46  ████████████████████
+     p4      63.7      156.8  2.46  ████████████████████
+     p5      63.7      156.7  2.46  ████████████████████
+     p6      63.7      145.1  2.28  ████████████████████
+     p7      63.7      160.2  2.52  ████████████████████
+     p8      63.7      160.2  2.52  ████████████████████
+     p9      63.7      162.1  2.55  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/34_all_pages_square_120536.txt

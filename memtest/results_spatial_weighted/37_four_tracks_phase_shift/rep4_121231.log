@@ -1,0 +1,143 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 37_four_tracks_phase_shift.json
+──────────────────────────────────────────────────────
+  duration  : 20s
+  heatmap   : 20 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (4):
+    [0]  region=0  [0s – 20s]
+         spatial  : hotspot  pages=[0, 1]  hot_ratio=0.9
+         temporal : sine  80±70 Hz  T=4.0s  φ=0.0
+    [1]  region=0  [0s – 20s]
+         spatial  : hotspot  pages=[2, 3]  hot_ratio=0.9
+         temporal : sine  80±70 Hz  T=4.0s  φ=1.57
+    [2]  region=0  [0s – 20s]
+         spatial  : hotspot  pages=[5, 6]  hot_ratio=0.9
+         temporal : sine  80±70 Hz  T=4.0s  φ=3.14
+    [3]  region=0  [0s – 20s]
+         spatial  : hotspot  pages=[8, 9]  hot_ratio=0.9
+         temporal : sine  80±70 Hz  T=4.0s  φ=4.71
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/37_four_tracks_phase_shift.json)...
+    Waiting for memtest to initialize...
+    App PID: 56117
+    Region: 0x75edc1241000-0x75edc124b000  (dec: 129664008065024-129664008105984)
+    DAMON bounding box: 129664008065024-129664008105984
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 25s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 20s  |  DAMON recording: 25s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 56117
+Regions: 1
+  [0] 0x75edc1241000-0x75edc124b000  (10 pages, 40 KB)
+Tracks:   4
+Duration: 20.0 s
+GO
+
+Done: 6400 total accesses in 20.0 s → ground truth: /tmp/batch_gt_Fi1O59.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_Fi1O59.log
+  6400 accesses, 1 region(s)
+  DAMON base: 0x75edc1241000
+  DAMON max:  0x75edc124b000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x75edc1241000  10 pages  resol=20×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 20 10 --address_range 129664008065024 129664008105984 --output raw
+
+  scale: 0=0.6 Hz  ...  9=99.9 Hz
+
+  GT   — what memtest actually did
+  6564021122
+  6522022046
+  2222055056
+  2155056022
+  6465012122
+  5621013055
+  2122056064
+  2255056012
+  5655121112
+  5621012055
+  2112065056
+  1265046012
+  5555021012
+  6512022056
+  1222056065
+  2255056021
+  5554121022
+  5522012055
+  2122055065
+  1266056012
+
+  DAMON — what kernel observed
+  7755112144
+  6411446155
+  1255447044
+  5288225111
+  6466002133
+  4722113099
+  2144337155
+  3355445011
+  5655111133
+  5722223099
+  2122336155
+  5366226011
+  7655221033
+  5522224055
+  2222336144
+  2277228033
+  5555222022
+  6522113055
+  2122449077
+  2377447033
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      40.0       45.9  1.15  ████████████████████
+     p1      37.5       43.8  1.17  ████████████████████
+     p2      39.6       46.7  1.18  ████████████████████
+     p3      38.4       46.7  1.22  ████████████████████
+     p4       3.8       26.1  6.97  ████████████████████
+     p5      37.3       26.1  0.70  ██████████████
+     p6      41.9       50.9  1.21  ████████████████████
+     p7       4.3        5.5  1.28  ████████████████████
+     p8      38.1       46.0  1.21  ████████████████████
+     p9      39.2       46.0  1.17  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/37_four_tracks_phase_shift_121253.txt

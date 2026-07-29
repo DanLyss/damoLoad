@@ -1,0 +1,119 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 20_gaussian_wide.json
+──────────────────────────────────────────────────────
+  duration  : 15s
+  heatmap   : 15 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 15s]
+         spatial  : gaussian  center=4.5  sigma=3.0
+         temporal : const  150 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/20_gaussian_wide.json)...
+    Waiting for memtest to initialize...
+    App PID: 46702
+    Region: 0x765cd1db1000-0x765cd1dbb000  (dec: 130141029863424-130141029904384)
+    DAMON bounding box: 130141029863424-130141029904384
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 20s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 15s  |  DAMON recording: 20s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 46702
+Regions: 1
+  [0] 0x765cd1db1000-0x765cd1dbb000  (10 pages, 40 KB)
+Tracks:   1
+Duration: 15.0 s
+GO
+
+Done: 2249 total accesses in 15.0 s → ground truth: /tmp/batch_gt_EDKE0o.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_EDKE0o.log
+  2249 accesses, 1 region(s)
+  DAMON base: 0x765cd1db1000
+  DAMON max:  0x765cd1dbb000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x765cd1db1000  10 pages  resol=15×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 15 10 --address_range 130141029863424 130141029904384 --output raw
+
+  scale: 0=5.0 Hz  ...  9=45.8 Hz
+
+  GT   — what memtest actually did
+  2123222233
+  2222542003
+  2222334201
+  4112252411
+  4002343212
+  2232432212
+  2222421222
+  1234233211
+  2024623122
+  2022244321
+  1223352312
+  2134432012
+  2112353222
+  2123343211
+  3213432212
+
+  DAMON — what kernel observed
+  2224432334
+  2443364112
+  3115553445
+  6112264332
+  5113354552
+  2445525333
+  3665532113
+  1333344442
+  2226629112
+  3113355221
+  2443382333
+  6336643112
+  3112265222
+  4443343113
+  5223332334
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      15.5       19.8  1.28  ████████████████████
+     p1      10.9       16.2  1.49  ████████████████████
+     p2      13.1       16.2  1.23  ████████████████████
+     p3      16.7       22.1  1.32  ████████████████████
+     p4      19.7       22.1  1.12  ████████████████████
+     p5      20.5       25.2  1.23  ████████████████████
+     p6      16.2       22.5  1.39  ████████████████████
+     p7      14.0       16.3  1.17  ████████████████████
+     p8      10.5       16.3  1.55  ████████████████████
+     p9      12.9       17.0  1.32  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/20_gaussian_wide_113732.txt

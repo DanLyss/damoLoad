@@ -1,0 +1,137 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 23_two_tracks_same_region.json
+──────────────────────────────────────────────────────
+  duration  : 20s
+  heatmap   : 20 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (2):
+    [0]  region=0  [0s – 20s]
+         spatial  : hotspot  pages=[0, 1, 2]  hot_ratio=0.8
+         temporal : const  100 Hz
+    [1]  region=0  [0s – 20s]
+         spatial  : hotspot  pages=[7, 8, 9]  hot_ratio=0.8
+         temporal : const  100 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/23_two_tracks_same_region.json)...
+    Waiting for memtest to initialize...
+    App PID: 48104
+    Region: 0x7b7bf7ee1000-0x7b7bf7eeb000  (dec: 135772370767872-135772370808832)
+    DAMON bounding box: 135772370767872-135772370808832
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 25s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 20s  |  DAMON recording: 25s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 48104
+Regions: 1
+  [0] 0x7b7bf7ee1000-0x7b7bf7eeb000  (10 pages, 40 KB)
+Tracks:   2
+Duration: 20.0 s
+GO
+
+Done: 3998 total accesses in 20.0 s → ground truth: /tmp/batch_gt_jMOiK1.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_jMOiK1.log
+  3998 accesses, 1 region(s)
+  DAMON base: 0x7b7bf7ee1000
+  DAMON max:  0x7b7bf7eeb000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7b7bf7ee1000  10 pages  resol=20×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 20 10 --address_range 135772370767872 135772370808832 --output raw
+
+  scale: 0=1.0 Hz  ...  9=50.9 Hz
+
+  GT   — what memtest actually did
+  6652011634
+  6541010575
+  6651111564
+  5661011565
+  6551111455
+  3671111465
+  6651110457
+  5561112563
+  6560211556
+  5561001565
+  5441111566
+  5651111465
+  6561111554
+  6541111555
+  5640111665
+  4651101654
+  6641121546
+  4551100575
+  5551121545
+  5641011565
+
+  DAMON — what kernel observed
+  7733000588
+  7744220677
+  6633002655
+  6633111577
+  8833111577
+  7788330455
+  7722110755
+  6633112466
+  6644112555
+  5544111744
+  7733112477
+  7733221555
+  5544331577
+  9922220655
+  9933331677
+  7744113655
+  6622111655
+  6644110588
+  6633221666
+  6622001866
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      30.2       38.1  1.26  ████████████████████
+     p1      30.7       38.1  1.24  ████████████████████
+     p2      28.8       19.6  0.68  █████████████
+     p3       5.9       19.6  3.35  ████████████████████
+     p4       5.4        8.9  1.66  ████████████████████
+     p5       6.4        8.9  1.38  ████████████████████
+     p6       5.3        6.7  1.26  ████████████████████
+     p7      28.5       32.4  1.14  ████████████████████
+     p8      30.9       34.5  1.12  ████████████████████
+     p9      28.2       34.5  1.23  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/23_two_tracks_same_region_114228.txt

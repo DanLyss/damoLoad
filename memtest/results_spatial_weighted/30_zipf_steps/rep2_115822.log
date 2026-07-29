@@ -1,0 +1,134 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 30_zipf_steps.json
+──────────────────────────────────────────────────────
+  duration  : 20s
+  heatmap   : 20 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 20s]
+         spatial  : zipf  s=1.5
+         temporal : steps  30Hz/5s  100Hz/5s  180Hz/5s  50Hz/5s
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/30_zipf_steps.json)...
+    Waiting for memtest to initialize...
+    App PID: 51956
+    Region: 0x71df2cbbe000-0x71df2cbc8000  (dec: 125203342155776-125203342196736)
+    DAMON bounding box: 125203342155776-125203342196736
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 25s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 20s  |  DAMON recording: 25s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 51956
+Regions: 1
+  [0] 0x71df2cbbe000-0x71df2cbc8000  (10 pages, 40 KB)
+Tracks:   1
+Duration: 20.0 s
+GO
+
+Done: 1802 total accesses in 20.0 s → ground truth: /tmp/batch_gt_psqOPl.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_psqOPl.log
+  1802 accesses, 1 region(s)
+  DAMON base: 0x71df2cbbe000
+  DAMON max:  0x71df2cbc8000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x71df2cbbe000  10 pages  resol=20×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 20 10 --address_range 125203342155776 125203342196736 --output raw
+
+  scale: 0=0.0 Hz  ...  9=106.7 Hz
+
+  GT   — what memtest actually did
+  1000000000
+  1100000000
+  1000000000
+  2000000000
+  2000000000
+  4111000000
+  5111000000
+  4110000000
+  4111000010
+  4211100000
+  8311100000
+  7311101000
+  8311101000
+  8311110100
+  8211111000
+  2110000000
+  2100100000
+  2100000000
+  2100000000
+  2110000000
+
+  DAMON — what kernel observed
+  2000000000
+  3000000000
+  4000000000
+  2000000000
+  4111000000
+  6221000000
+  5220000000
+  5111000000
+  5111000110
+  7221110000
+  9221111000
+  9222111000
+  8331111000
+  9222330110
+  9331111000
+  2110000000
+  3110000000
+  2110000000
+  3000000000
+  2110000000
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      46.5       57.7  1.24  ████████████████████
+     p1      15.5       15.0  0.97  ███████████████████
+     p2       7.8       15.0  1.92  ████████████████████
+     p3       5.8        7.5  1.30  ████████████████████
+     p4       4.6        5.9  1.30  ████████████████████
+     p5       2.6        5.9  2.32  ████████████████████
+     p6       2.0        2.9  1.48  ████████████████████
+     p7       2.1        2.4  1.15  ████████████████████
+     p8       1.7        2.4  1.42  ████████████████████
+     p9       1.8        0.1  0.06  █
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/30_zipf_steps_115845.txt

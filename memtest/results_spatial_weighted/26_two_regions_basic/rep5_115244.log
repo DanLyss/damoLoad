@@ -1,0 +1,179 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 26_two_regions_basic.json
+──────────────────────────────────────────────────────
+  duration  : 15s
+  heatmap   : 15 rows × 10 cols
+
+  regions (2):
+    [0]  10 pages  (40 KB)
+    [1]  10 pages  (40 KB)
+
+  tracks (2):
+    [0]  region=0  [0s – 15s]
+         spatial  : uniform
+         temporal : const  100 Hz
+    [1]  region=1  [0s – 15s]
+         spatial  : hotspot  pages=[0, 1]  hot_ratio=0.9
+         temporal : const  150 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/26_two_regions_basic.json)...
+    Waiting for memtest to initialize...
+    App PID: 50153
+    Region: 0x78aba6cdd000-0x78aba6ce7000  (dec: 132678633246720-132678633287680)
+    Region: 0x78aba6cd3000-0x78aba6cdd000  (dec: 132678633205760-132678633246720)
+    DAMON bounding box: 132678633205760-132678633287680
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 20s
+    kdamonds: 1 target, 2 regions
+==> Starting workload...
+==> Workload: 15s  |  DAMON recording: 20s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 50153
+Regions: 2
+  [0] 0x78aba6cdd000-0x78aba6ce7000  (10 pages, 40 KB)
+  [1] 0x78aba6cd3000-0x78aba6cdd000  (10 pages, 40 KB)
+Tracks:   2
+Duration: 15.0 s
+GO
+
+Done: 3748 total accesses in 15.0 s → ground truth: /tmp/batch_gt_cAimSM.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_cAimSM.log
+  3748 accesses, 2 region(s)
+  DAMON base: 0x78aba6cd3000
+  DAMON max:  0x78aba6ce7000
+  DAMON span: 81920 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x78aba6cdd000  10 pages  resol=15×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 15 10 --address_range 132678633246720 132678633287680 --output raw
+
+  scale: 0=0.0 Hz  ...  9=27.3 Hz
+
+  GT   — what memtest actually did
+  2424532335
+  4431453432
+  3224454342
+  3343433244
+  4432334444
+  4324235344
+  6642243223
+  5343342423
+  3242643522
+  2332234633
+  3443322453
+  2364333324
+  4333432434
+  5432442324
+  2224543273
+
+  DAMON — what kernel observed
+  3332233233
+  2555555744
+  3114499355
+  0772277455
+  4773366466
+  4443377422
+  4222244433
+  3555533433
+  0336677544
+  1443333922
+  1664466366
+  2553355533
+  5774411544
+  4443344455
+  2226644399
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      10.3        7.5  0.73  ██████████████
+     p1      10.3       13.4  1.31  ████████████████████
+     p2       9.5       13.4  1.42  ████████████████████
+     p3       8.7       11.0  1.26  ████████████████████
+     p4      10.5       11.0  1.05  ████████████████████
+     p5      10.8       14.9  1.38  ████████████████████
+     p6       9.1       15.0  1.64  ████████████████████
+     p7      10.3       13.4  1.31  ████████████████████
+     p8      10.4       13.0  1.25  ████████████████████
+     p9      10.1       13.0  1.28  ████████████████████
+
+═══════════════════════════════════════════════════════
+  Region 1  base=0x78aba6cd3000  10 pages  resol=15×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 15 10 --address_range 132678633205760 132678633246720 --output raw
+
+  scale: 0=0.0 Hz  ...  9=115.6 Hz
+
+  GT   — what memtest actually did
+  6500000000
+  5500000000
+  6500000000
+  5500000000
+  5500000000
+  5500000000
+  5600000000
+  5600000000
+  6400000000
+  5500000000
+  6500000000
+  5600000000
+  6400000000
+  5500000000
+  4600000000
+
+  DAMON — what kernel observed
+  6600011001
+  6600000001
+  6600000001
+  6600011000
+  6600000001
+  9900000111
+  6600000001
+  5500000001
+  8800000000
+  8800000000
+  6600000000
+  5500000000
+  6600000001
+  5500000001
+  7700000000
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      67.3       80.6  1.20  ████████████████████
+     p1      68.1       80.6  1.18  ████████████████████
+     p2       1.3        1.4  1.14  ████████████████████
+     p3       1.5        1.4  0.99  ███████████████████
+     p4       2.5        3.0  1.21  ████████████████████
+     p5       2.1        3.4  1.61  ████████████████████
+     p6       1.9        3.4  1.78  ████████████████████
+     p7       1.7        2.3  1.35  ████████████████████
+     p8       1.9        2.3  1.21  ████████████████████
+     p9       1.7        7.4  4.46  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/26_two_regions_basic_115302.txt

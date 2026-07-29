@@ -1,0 +1,180 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 42_gaussian_moving_center.json
+──────────────────────────────────────────────────────
+  duration  : 30s
+  heatmap   : 30 rows × 20 cols
+
+  regions (1):
+    [0]  20 pages  (80 KB)
+
+  tracks (3):
+    [0]  region=0  [0s – 10s]
+         spatial  : gaussian  center=2.0  sigma=2.0
+         temporal : const  150 Hz
+    [1]  region=0  [10s – 20s]
+         spatial  : gaussian  center=10.0  sigma=2.0
+         temporal : const  150 Hz
+    [2]  region=0  [20s – 30s]
+         spatial  : gaussian  center=17.0  sigma=2.0
+         temporal : const  150 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/42_gaussian_moving_center.json)...
+    Waiting for memtest to initialize...
+    App PID: 58694
+    Region: 0x7681af54c000-0x7681af560000  (dec: 130299364425728-130299364507648)
+    DAMON bounding box: 130299364425728-130299364507648
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 35s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 30s  |  DAMON recording: 35s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 58694
+Regions: 1
+  [0] 0x7681af54c000-0x7681af560000  (20 pages, 80 KB)
+Tracks:   3
+Duration: 30.0 s
+GO
+
+Done: 4499 total accesses in 30.0 s → ground truth: /tmp/batch_gt_EcGPem.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_EcGPem.log
+  4499 accesses, 1 region(s)
+  DAMON base: 0x7681af54c000
+  DAMON max:  0x7681af560000
+  DAMON span: 81920 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7681af54c000  20 pages  resol=30×20
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 30 20 --address_range 130299364425728 130299364507648 --output raw
+
+  scale: 0=0.0 Hz  ...  9=51.7 Hz
+
+  GT   — what memtest actually did
+  65444211000000000000
+  65732211000000000000
+  73562110000000000000
+  64634200000000000000
+  63653110000000000000
+  74534210000000000000
+  74534110000000000000
+  66444110000000000000
+  46643210000000000000
+  64554210000000000000
+  00000111454342100000
+  00000011455332110000
+  00000011256532110000
+  00000002356432100000
+  00000012355512110000
+  00000013366322000000
+  00000012364441100000
+  00000011336631100000
+  00000112345541100000
+  00000013345341100000
+  00000000000001244636
+  00000000000001244546
+  00000000000001235536
+  00000000000001134656
+  00000000000001244655
+  00000000000001235555
+  00000000000001234646
+  00000000000001335546
+  00000000000001144565
+  00000000000001233666
+
+  DAMON — what kernel observed
+  84333311111111111100
+  65772211000000000000
+  77553300000000000000
+  77444411000000000000
+  44662211000000000000
+  77554400000000000000
+  77443311000000000000
+  77555511000000000000
+  55665500000000000000
+  77444411112211000000
+  00000022665544110000
+  00000022885544110000
+  00000000337744110000
+  00000011555533110000
+  00000022885522110000
+  00000033668822000000
+  00000022444444000000
+  00000011556622000000
+  00001111335555110000
+  00000022555533111100
+  00000000000011447777
+  00000000000011444455
+  00000000000011118855
+  00000000000011445588
+  00000000000000335555
+  00000000000011335599
+  00000000000000336666
+  00000000000000444455
+  00000000000000448877
+  00000000000000224488
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      11.8       12.3  1.04  ████████████████████
+     p1       8.6       11.5  1.34  ████████████████████
+     p2      10.1        9.2  0.91  ██████████████████
+     p3       7.9        9.2  1.15  ████████████████████
+     p4       6.7        7.0  1.04  ████████████████████
+     p5       3.6        7.0  1.93  ████████████████████
+     p6       3.0        4.1  1.37  ████████████████████
+     p7       3.8        4.1  1.08  ████████████████████
+     p8       5.9       10.2  1.73  ████████████████████
+     p9       9.2       10.2  1.12  ████████████████████
+    p10       9.9       10.8  1.09  ████████████████████
+    p11       7.9       10.8  1.36  ████████████████████
+    p12       6.4        7.4  1.16  ████████████████████
+    p13       4.9        7.4  1.52  ████████████████████
+    p14       5.3        7.1  1.35  ████████████████████
+    p15       7.0        7.1  1.02  ████████████████████
+    p16       7.9       11.2  1.41  ████████████████████
+    p17      10.4       11.2  1.07  ████████████████████
+    p18       8.6       12.3  1.43  ████████████████████
+    p19      11.0       12.3  1.12  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/42_gaussian_moving_center_122257.txt

@@ -1,0 +1,114 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 09_ramp_up.json
+──────────────────────────────────────────────────────
+  duration  : 15s
+  heatmap   : 15 rows × 5 cols
+
+  regions (1):
+    [0]  5 pages  (20 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 15s]
+         spatial  : uniform
+         temporal : ramp  0→200 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: /mnt/c/Users/Dan/damo/memtest/configs/09_ramp_up.json)...
+    Waiting for memtest to initialize...
+    App PID: 40640
+    Region: 0x7c4a61706000-0x7c4a6170b000  (dec: 136658904178688-136658904199168)
+    DAMON bounding box: 136658904178688-136658904199168
+==> Setting up DAMON...
+/mnt/c/Users/Dan/damo/run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 20s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 15s  |  DAMON recording: 20s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 40640
+Regions: 1
+  [0] 0x7c4a61706000-0x7c4a6170b000  (5 pages, 20 KB)
+Tracks:   1
+Duration: 15.0 s
+GO
+
+Done: 1503 total accesses in 15.0 s → ground truth: /tmp/batch_gt_aj2TG5.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_aj2TG5.log
+  1503 accesses, 1 region(s)
+  DAMON base: 0x7c4a61706000
+  DAMON max:  0x7c4a6170b000
+  DAMON span: 20480 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7c4a61706000  5 pages  resol=15×5
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 15 5 --address_range 136658904178688 136658904199168 --output raw
+
+  scale: 0=0.7 Hz  ...  9=60.8 Hz
+
+  GT   — what memtest actually did
+  11112
+  11112
+  11122
+  31211
+  22222
+  32232
+  33223
+  23343
+  44343
+  64333
+  53535
+  45634
+  45654
+  55656
+  65477
+
+  DAMON — what kernel observed
+  00000
+  10002
+  11114
+  22222
+  31334
+  34332
+  53223
+  24333
+  54333
+  55443
+  73555
+  55665
+  45554
+  55998
+  74448
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      22.9       25.5  1.11  ████████████████████
+     p1      21.0       21.8  1.04  ████████████████████
+     p2      21.3       22.7  1.06  ████████████████████
+     p3      20.5       22.7  1.10  ████████████████████
+     p4      22.2       26.0  1.17  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/09_ramp_up_111817.txt
