@@ -1,0 +1,137 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 47_sine_vs_square.json
+──────────────────────────────────────────────────────
+  duration  : 20s
+  heatmap   : 20 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (2):
+    [0]  region=0  [0s – 20s]
+         spatial  : hotspot  pages=[0, 1, 2, 3, 4]  hot_ratio=0.9
+         temporal : sine  100±80 Hz  T=2.0s  φ=0
+    [1]  region=0  [0s – 20s]
+         spatial  : hotspot  pages=[5, 6, 7, 8, 9]  hot_ratio=0.9
+         temporal : square  180 Hz  duty=0.5  T=2.0s  φ=0
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: memtest/configs/47_sine_vs_square.json)...
+    Waiting for memtest to initialize...
+    App PID: 4869
+    Region: 0x70c6bad9a000-0x70c6bada4000  (dec: 123998840659968-123998840700928)
+    DAMON bounding box: 123998840659968-123998840700928
+==> Setting up DAMON...
+run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 25s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 20s  |  DAMON recording: 25s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 4869
+Regions: 1
+  [0] 0x70c6bad9a000-0x70c6bada4000  (10 pages, 40 KB)
+Tracks:   2
+Duration: 20.0 s
+GO
+
+Done: 3800 total accesses in 20.0 s → ground truth: /tmp/batch_gt_Fc8wbF.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_Fc8wbF.log
+  3800 accesses, 1 region(s)
+  DAMON base: 0x70c6bad9a000
+  DAMON max:  0x70c6bada4000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x70c6bad9a000  10 pages  resol=20×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 20 10 --address_range 123998840659968 123998840700928 --output raw
+
+  scale: 0=0.0 Hz  ...  9=55.1 Hz
+
+  GT   — what memtest actually did
+  7564557646
+  1111200000
+  4665456664
+  2112100000
+  4664565666
+  1211200000
+  5566645557
+  2112100000
+  5546565575
+  2112100000
+  5555566666
+  2112100000
+  5555675666
+  2211100000
+  5574475557
+  1121200000
+  5564567764
+  1112100000
+  6473446847
+  2211100000
+
+  DAMON — what kernel observed
+  8577448665
+  1222001110
+  4777556775
+  3111110110
+  4755666886
+  1311110110
+  6666666556
+  2111110000
+  6566996664
+  2222220001
+  6666776885
+  2222110111
+  6577554665
+  3122111001
+  6966666556
+  1222110000
+  5755667995
+  1122000000
+  8588446447
+  2222220001
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      19.9       23.8  1.20  ████████████████████
+     p1      20.3       23.8  1.18  ████████████████████
+     p2      21.2       24.9  1.17  ████████████████████
+     p3      18.7       24.9  1.33  ████████████████████
+     p4      19.8       21.6  1.09  ████████████████████
+     p5      17.6       21.6  1.23  ████████████████████
+     p6      17.5       20.2  1.16  ████████████████████
+     p7      19.4       21.9  1.13  ████████████████████
+     p8      17.9       21.9  1.22  ████████████████████
+     p9      17.9       18.4  1.03  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/47_sine_vs_square_114519.txt

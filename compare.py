@@ -102,8 +102,15 @@ def build_gt_grid(entries, region_idx, n_pages, t_rows, s_cols, t0_ns, t1_ns):
 def build_damon_grid(damon_path, t_rows, s_cols, addr_start=None, addr_end=None, damo_exe='damo'):
     """
     Run damo report heatmap scoped to [addr_start, addr_end) using damo's own
-    --address_range option.  damo bins the data into t_rows × s_cols pixels;
-    we just parse the raw output directly into a grid.
+    --address_range option, at exactly t_rows x s_cols resolution.
+
+    damo's HeatMap (damo_report_heatmap.py) always builds a complete,
+    dense t_rows x s_cols grid up front and --output raw prints it in a
+    fixed row-major order (row 0's s_cols pixels, then row 1's, ...) with
+    no gaps -- so line `idx` of the output is unconditionally
+    grid[idx // s_cols][idx % s_cols]. No inference from the printed
+    time/addr offsets is needed or wanted: this is a direct reshape of
+    damo's own heatmap, not a re-derived one.
     """
     cmd = [damo_exe, 'report', 'heatmap',
            '--input', damon_path,
@@ -121,32 +128,31 @@ def build_damon_grid(damon_path, t_rows, s_cols, addr_start=None, addr_end=None,
         print(f'  damo report heatmap error:\n{res.stderr[:300]}')
         return None
 
-    pixels = []
+    # keep one entry per line, in printed (row-major) order -- NaN pixels
+    # become 0.0 in place rather than being dropped, so a missing/NaN line
+    # doesn't shift every later index.
+    heats = []
     for line in res.stdout.splitlines():
         if not line.strip() or line.startswith('#'):
             continue
         parts = line.split()
-        if len(parts) >= 3 and parts[2] != 'NaN':
-            try:
-                pixels.append((float(parts[0]), float(parts[1]), float(parts[2])))
-            except ValueError:
-                continue
-    if not pixels:
+        if len(parts) < 3:
+            continue
+        try:
+            heats.append(0.0 if parts[2] == 'NaN' else float(parts[2]))
+        except ValueError:
+            continue
+    if not heats:
         return None
 
-    # damo outputs time and addr as relative offsets (abs_time/abs_addr default False).
-    # Remap to grid indices using the actual data range.
-    t_vals = [p[0] for p in pixels]
-    a_vals = [p[1] for p in pixels]
-    t_max     = max(t_vals)
-    a_min     = min(a_vals)
-    addr_span = max(a_vals) - a_min if max(a_vals) > a_min else 1.0
+    if len(heats) != t_rows * s_cols:
+        print(f'  WARNING: expected {t_rows * s_cols} pixels from damo, got {len(heats)}')
 
     grid = [[0.0] * s_cols for _ in range(t_rows)]
-    for t_off, a_off, heat in pixels:
-        t_idx = min(t_rows - 1, int(t_off / (t_max + 1e-9) * t_rows))
-        s_idx = min(s_cols - 1, int((a_off - a_min) / (addr_span + 1e-9) * s_cols))
-        grid[t_idx][s_idx] = max(grid[t_idx][s_idx], heat)
+    for idx, heat in enumerate(heats):
+        i, j = idx // s_cols, idx % s_cols
+        if i < t_rows and j < s_cols:
+            grid[i][j] = heat
     return grid
 
 

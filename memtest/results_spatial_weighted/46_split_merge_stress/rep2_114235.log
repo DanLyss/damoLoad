@@ -1,0 +1,176 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 46_split_merge_stress.json
+──────────────────────────────────────────────────────
+  duration  : 30s
+  heatmap   : 30 rows × 16 cols
+
+  regions (1):
+    [0]  16 pages  (64 KB)
+
+  tracks (3):
+    [0]  region=0  [0s – 15s]
+         spatial  : hotspot  pages=[0, 1, 2, 3]  hot_ratio=0.7
+         temporal : const  200 Hz
+    [1]  region=0  [15s – 30s]
+         spatial  : hotspot  pages=[12, 13, 14, 15]  hot_ratio=0.7
+         temporal : const  200 Hz
+    [2]  region=0  [0s – 30s]
+         spatial  : uniform
+         temporal : const  20 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: memtest/configs/46_split_merge_stress.json)...
+    Waiting for memtest to initialize...
+    App PID: 4354
+    Region: 0x7082792b6000-0x7082792c6000  (dec: 123705680945152-123705681010688)
+    DAMON bounding box: 123705680945152-123705681010688
+==> Setting up DAMON...
+run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 35s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 30s  |  DAMON recording: 35s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 4354
+Regions: 1
+  [0] 0x7082792b6000-0x7082792c6000  (16 pages, 64 KB)
+Tracks:   3
+Duration: 30.0 s
+GO
+
+Done: 6598 total accesses in 30.0 s → ground truth: /tmp/batch_gt_ujsBTD.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_ujsBTD.log
+  6598 accesses, 1 region(s)
+  DAMON base: 0x7082792b6000
+  DAMON max:  0x7082792c6000
+  DAMON span: 65536 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7082792b6000  16 pages  resol=30×16
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 30 16 --address_range 123705680945152 123705681010688 --output raw
+
+  scale: 0=0.0 Hz  ...  9=65.6 Hz
+
+  GT   — what memtest actually did
+  6554111121011011
+  5664110111111111
+  4554010111101022
+  5456101111111110
+  5645101200211111
+  5555001111111110
+  5545011111211111
+  5574111111121111
+  4564111011111112
+  5464111111110121
+  5475111111101011
+  4565111112110100
+  5455101111111111
+  5455011101112111
+  6544011111111111
+  1111002111125535
+  1112101102106564
+  0122111110105554
+  1112111111015466
+  1111111201115555
+  0011121101114565
+  1111211011115445
+  1111111111115654
+  1100111111115637
+  1111111111115445
+  1110111111114765
+  1111111111115455
+  1111111111016456
+  1111120111105654
+  0110111111116754
+
+  DAMON — what kernel observed
+  5554111111111221
+  7764211111133111
+  5565122111111111
+  6665211111100110
+  7755111221111111
+  5557111111111110
+  5546022112211221
+  5565111111111111
+  4475211001111222
+  5576111111111222
+  5575111110022111
+  5565111111111110
+  4454111222222110
+  5566022221122111
+  6634011222211112
+  1112000002233664
+  1112100221133774
+  1122111111133555
+  1122111111133556
+  1111111111133555
+  0012222112233666
+  1120222002244667
+  1111211223333553
+  2200111111144779
+  2211111111144557
+  1120111112222776
+  1121122111144556
+  2211111111133556
+  1111111112222664
+  0010311111133664
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      21.3       22.8  1.07  ████████████████████
+     p1      21.0       22.8  1.08  ████████████████████
+     p2      23.1       24.9  1.08  ████████████████████
+     p3      20.0       22.3  1.12  ████████████████████
+     p4       6.3        8.2  1.31  ████████████████████
+     p5       5.9        7.9  1.33  ████████████████████
+     p6       6.3        7.9  1.26  ████████████████████
+     p7       6.7        7.6  1.13  ████████████████████
+     p8       5.7        7.6  1.35  ████████████████████
+     p9       6.5        9.8  1.50  ████████████████████
+    p10       6.8        9.8  1.44  ████████████████████
+    p11       6.0       16.6  2.78  ████████████████████
+    p12      20.6       16.6  0.81  ████████████████
+    p13      21.5       25.0  1.16  ████████████████████
+    p14      21.4       25.0  1.17  ████████████████████
+    p15      20.9       24.4  1.17  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/46_split_merge_stress_114310.txt

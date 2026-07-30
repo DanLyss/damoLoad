@@ -1,0 +1,154 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 45_many_pages_zipf.json
+──────────────────────────────────────────────────────
+  duration  : 20s
+  heatmap   : 20 rows × 30 cols
+
+  regions (1):
+    [0]  30 pages  (120 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 20s]
+         spatial  : zipf  s=1.2
+         temporal : const  150 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: memtest/configs/45_many_pages_zipf.json)...
+    Waiting for memtest to initialize...
+    App PID: 4087
+    Region: 0x7a2bffbf0000-0x7a2bffc0e000  (dec: 134329392889856-134329393012736)
+    DAMON bounding box: 134329392889856-134329393012736
+==> Setting up DAMON...
+run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 25s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 20s  |  DAMON recording: 25s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 4087
+Regions: 1
+  [0] 0x7a2bffbf0000-0x7a2bffc0e000  (30 pages, 120 KB)
+Tracks:   1
+Duration: 20.0 s
+GO
+
+Done: 2999 total accesses in 20.0 s → ground truth: /tmp/batch_gt_MNvrlE.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_MNvrlE.log
+  2999 accesses, 1 region(s)
+  DAMON base: 0x7a2bffbf0000
+  DAMON max:  0x7a2bffc0e000
+  DAMON span: 122880 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7a2bffbf0000  30 pages  resol=20×30
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 20 30 --address_range 134329392889856 134329393012736 --output raw
+
+  scale: 0=0.0 Hz  ...  9=58.0 Hz
+
+  GT   — what memtest actually did
+  942110101110000000000000000000
+  842111001001000000000000000000
+  841210100100000000000000000000
+  652111111100000000000000000000
+  843120111000100000000000000000
+  822211200000100000000000000000
+  831211101110000000000000000000
+  923211001010000000000000000000
+  832210101000010100000000000000
+  832210000010000000000010000000
+  732201110100001010000000000000
+  733111110000110000000000000000
+  752201111000000000000010000000
+  852121110101000000000000000000
+  642211110110000000000000010000
+  842121100111100000000000000000
+  822111100100010100000000000000
+  652111101001000000000000000000
+  742211011100000100000000000000
+  832111010101010000000000000000
+
+  DAMON — what kernel observed
+  851111000010000000000000000000
+  772321111000000000000000000000
+  533111111100000000000000000011
+  654110021100100000000000000000
+  933110110001100000000000000000
+  833221101100000000000000000000
+  773220111110001000001100000000
+  443322210000000000000011000000
+  662211000100000000000000000000
+  772211101100000000000000000000
+  552211220000111100000000000000
+  551111111100110000000000000011
+  443300110000000000000011000000
+  882222111111000000000000000000
+  662211110000110000000000000000
+  661133000011000000110000000000
+  554411110000000000000000000000
+  552211110011110000001100000000
+  881111110000000011000000000000
+  552211000011110000000000110000
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      48.6       40.3  0.83  ████████████████
+     p1      22.7       34.6  1.52  ████████████████████
+     p2      13.1       15.5  1.18  ████████████████████
+     p3       9.3       13.0  1.40  ████████████████████
+     p4       7.0        8.6  1.22  ████████████████████
+     p5       5.0        6.8  1.37  ████████████████████
+     p6       4.8        6.1  1.28  ████████████████████
+     p7       3.4        5.5  1.61  ████████████████████
+     p8       3.7        3.6  0.97  ███████████████████
+     p9       3.5        3.4  1.00  ███████████████████
+    p10       2.8        3.1  1.11  ████████████████████
+    p11       2.3        3.1  1.33  ████████████████████
+    p12       2.6        3.4  1.32  ████████████████████
+    p13       2.3        3.1  1.34  ████████████████████
+    p14       2.0        2.4  1.20  ████████████████████
+    p15       1.9        1.8  1.00  ███████████████████
+    p16       1.4        1.4  0.97  ███████████████████
+    p17       1.3        1.3  1.01  ████████████████████
+    p18       0.9        1.3  1.48  ████████████████████
+    p19       1.2        1.3  1.11  ████████████████████
+    p20       0.7        1.2  1.78  ████████████████████
+    p21       1.4        1.4  1.00  ████████████████████
+    p22       1.5        1.5  1.04  ████████████████████
+    p23       0.9        1.5  1.67  ████████████████████
+    p24       1.2        1.6  1.30  ████████████████████
+    p25       1.4        1.6  1.16  ████████████████████
+    p26       0.7        0.7  1.04  ████████████████████
+    p27       0.9        0.7  0.80  ███████████████
+    p28       1.2        1.1  0.99  ███████████████████
+    p29       0.8        1.1  1.52  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/45_many_pages_zipf_114159.txt

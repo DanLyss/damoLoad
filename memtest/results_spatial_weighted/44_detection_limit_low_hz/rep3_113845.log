@@ -1,0 +1,134 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 44_detection_limit_low_hz.json
+──────────────────────────────────────────────────────
+  duration  : 20s
+  heatmap   : 20 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (1):
+    [0]  region=0  [0s – 20s]
+         spatial  : hotspot  pages=[0, 1]  hot_ratio=0.9
+         temporal : steps  1Hz/4s  5Hz/4s  10Hz/4s  20Hz/4s  50Hz/4s
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: memtest/configs/44_detection_limit_low_hz.json)...
+    Waiting for memtest to initialize...
+    App PID: 3310
+    Region: 0x7b3f81d9c000-0x7b3f81da6000  (dec: 135512691687424-135512691728384)
+    DAMON bounding box: 135512691687424-135512691728384
+==> Setting up DAMON...
+run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 25s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 20s  |  DAMON recording: 25s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 3310
+Regions: 1
+  [0] 0x7b3f81d9c000-0x7b3f81da6000  (10 pages, 40 KB)
+Tracks:   1
+Duration: 20.0 s
+GO
+
+Done: 351 total accesses in 20.0 s → ground truth: /tmp/batch_gt_meglaF.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_meglaF.log
+  351 accesses, 1 region(s)
+  DAMON base: 0x7b3f81d9c000
+  DAMON max:  0x7b3f81da6000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7b3f81d9c000  10 pages  resol=20×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 20 10 --address_range 135512691687424 135512691728384 --output raw
+
+  scale: 0=0.0 Hz  ...  9=34.0 Hz
+
+  GT   — what memtest actually did
+  0000000000
+  0000000000
+  0000000000
+  1100000000
+  1100000000
+  1100000000
+  1100000000
+  1100000000
+  1100000000
+  2100000000
+  1200000000
+  2100000000
+  3300000000
+  3100000000
+  3100000100
+  3300001001
+  6501000000
+  7600000000
+  7500000000
+  7500000010
+
+  DAMON — what kernel observed
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  1100000000
+  0000000000
+  1100000000
+  1100000000
+  3300000000
+  5500000000
+  2200000000
+  3300000000
+  2200000000
+  1100000000
+  4400000100
+  5500000000
+  7701001000
+  9900000000
+  8800000000
+  7700000000
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0       9.4       11.1  1.19  ████████████████████
+     p1       7.5       11.1  1.49  ████████████████████
+     p2       0.1        0.1  0.97  ███████████████████
+     p3       0.2        0.2  1.19  ████████████████████
+     p4       0.0        0.2     —  
+     p5       0.2        0.2  0.73  ██████████████
+     p6       0.2        0.2  0.96  ███████████████████
+     p7       0.3        0.3  0.97  ███████████████████
+     p8       0.3        0.3  0.97  ███████████████████
+     p9       0.4        0.3  0.69  █████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/44_detection_limit_low_hz_113907.txt

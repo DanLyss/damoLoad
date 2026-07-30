@@ -15,7 +15,7 @@
       },
       "temporal": {
         "type": "const",
-        "hz": 100
+        "hz": 500
       },
       "start_sec": 0,
       "end_sec": 15

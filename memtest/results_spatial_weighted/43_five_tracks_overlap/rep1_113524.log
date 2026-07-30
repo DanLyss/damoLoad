@@ -1,0 +1,161 @@
+
+╔══════════════════════════════════════════════════════╗
+  Workload: 43_five_tracks_overlap.json
+──────────────────────────────────────────────────────
+  duration  : 25s
+  heatmap   : 25 rows × 10 cols
+
+  regions (1):
+    [0]  10 pages  (40 KB)
+
+  tracks (5):
+    [0]  region=0  [0s – 25s]
+         spatial  : hotspot  pages=[0]  hot_ratio=0.95
+         temporal : const  100 Hz
+    [1]  region=0  [5s – 25s]
+         spatial  : hotspot  pages=[2]  hot_ratio=0.95
+         temporal : const  100 Hz
+    [2]  region=0  [10s – 25s]
+         spatial  : hotspot  pages=[4]  hot_ratio=0.95
+         temporal : const  100 Hz
+    [3]  region=0  [15s – 25s]
+         spatial  : hotspot  pages=[6]  hot_ratio=0.95
+         temporal : const  100 Hz
+    [4]  region=0  [20s – 25s]
+         spatial  : hotspot  pages=[8]  hot_ratio=0.95
+         temporal : const  100 Hz
+╚══════════════════════════════════════════════════════╝
+
+==> Building memtest...
+==> Starting memtest (workload: memtest/configs/43_five_tracks_overlap.json)...
+    Waiting for memtest to initialize...
+    App PID: 2506
+    Region: 0x7f1d29a93000-0x7f1d29a9d000  (dec: 139763229732864-139763229773824)
+    DAMON bounding box: 139763229732864-139763229773824
+==> Setting up DAMON...
+run_memtest.sh: line 91: /sys/kernel/mm/damon/admin/kdamonds/0/state: No such file or directory
+    Recording for 30s
+    kdamonds: 1 target, 1 regions
+==> Starting workload...
+==> Workload: 25s  |  DAMON recording: 30s (includes margin)
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+your 131072x1 screen size is bogus. expect trouble
+Press Ctrl+C to stop
+
+==> memtest output:
+PID: 2506
+Regions: 1
+  [0] 0x7f1d29a93000-0x7f1d29a9d000  (10 pages, 40 KB)
+Tracks:   5
+Duration: 25.0 s
+GO
+
+Done: 7499 total accesses in 25.0 s → ground truth: /tmp/batch_gt_rLRDMV.log
+
+==> Comparing with DAMON...
+Loading GT: /tmp/batch_gt_rLRDMV.log
+  7499 accesses, 1 region(s)
+  DAMON base: 0x7f1d29a93000
+  DAMON max:  0x7f1d29a9d000
+  DAMON span: 40960 B
+
+═══════════════════════════════════════════════════════
+  Region 0  base=0x7f1d29a93000  10 pages  resol=25×10
+═══════════════════════════════════════════════════════
+  Running: /home/goidan/damo/damo report heatmap --resol 25 10 --address_range 139763229732864 139763229773824 --output raw
+
+  scale: 0=0.0 Hz  ...  9=601.7 Hz
+
+  GT   — what memtest actually did
+  1000000000
+  1000000000
+  1000000000
+  1000000000
+  1000000000
+  1010000000
+  1010000000
+  1010000000
+  1010000000
+  1010000000
+  1010100000
+  1010100000
+  1010100000
+  1010100000
+  1010100000
+  1010101000
+  1010101000
+  1010101000
+  1010101000
+  1010101000
+  1010101010
+  1010101010
+  1010101010
+  2010101020
+  1010101010
+
+  DAMON — what kernel observed
+  2000000000
+  2000000000
+  3000000000
+  2000000000
+  2000000000
+  2011000000
+  4022000000
+  7022000000
+  2011000000
+  5022100000
+  7011700000
+  8011500000
+  3011700000
+  4011800000
+  2011500000
+  4022833000
+  6011711000
+  4022622000
+  2011311000
+  2011511000
+  3022411011
+  3011211011
+  4011433011
+  9022411011
+  4011411011
+
+    col     GT Hz   DAMON Hz  ratio  bar
+  ──────────────────────────────────────────────────
+     p0      95.8      255.0  2.66  ████████████████████
+     p1       1.9        2.1  1.10  ████████████████████
+     p2      77.3       69.5  0.90  █████████████████
+     p3       1.6       69.5  43.41  ████████████████████
+     p4      58.9      210.5  3.57  ████████████████████
+     p5       1.6       42.0  25.58  ████████████████████
+     p6      39.1       42.0  1.07  ████████████████████
+     p7       1.5        2.0  1.35  ████████████████████
+     p8      20.9       16.7  0.80  ███████████████
+     p9       1.4       16.7  11.57  ████████████████████
+
+
+==> Log saved: /mnt/c/Users/Dan/damo/memtest/results/43_five_tracks_overlap_113555.txt
