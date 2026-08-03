@@ -1,43 +1,70 @@
 # Spatial-weighted heatmap: accuracy evaluation
 
-50 synthetic memtest workloads, 5 repetitions each, scored against measured
-ground truth — once through the heatmap renderer as locally patched
-(`heat = heat_val * account_time`, any nonzero address-axis overlap gets the
-region's full frequency), once through upstream's original per-column
-overlap weighting (`heat = heat_val * account_time * account_sz`).
-
 Rendered version of this analysis (chart + sortable table):
 https://claude.ai/code/artifact/117dcb2d-7424-4216-a53d-034521e32d8e
 
-## Where this lives
+## Executive summary
 
-| What | Path |
-|---|---|
-| Baseline run ("before") | `memtest/results/<config>/rep{1..5}_*.log` |
-| Patched run ("after") | `memtest/results_spatial_weighted/<config>/rep{1..5}_*.log` |
-| Scorer | `memtest/scripts/score_results.py` |
-| Excluded | `02_single_page_const_high` — broken workload, dropped |
+Restoring upstream damo's per-column spatial overlap weighting in the
+heatmap renderer (`damo_report_heatmap.py`) was tested against 49 synthetic
+memtest workloads (5 reps each, 490 runs) with ground truth measured
+directly by the harness.
 
-500 total runs across both batches, 0 failed.
+- **Shape fidelity nearly doubled:** GT↔DAMON correlation rose **0.39 → 0.73**.
+- **Absolute accuracy improved modestly:** a bounded, outlier-resistant
+  accuracy score rose **0.770 → 0.816** (37 of 49 configs gained correlation).
+- **The patch mostly fixes *where* DAMON says the heat is, not *how much*.**
+- Two failure clusters remain **regardless of this patch**: workloads with
+  several independent access patterns sharing one region (accuracy down to
+  0.51–0.57), and workloads where an entire region is modulated in lockstep
+  (accuracy 0.57–0.66) — both point at DAMON's one-frequency-per-region
+  model, not at the heatmap renderer.
+- One config (`01_single_page_const_low`) exposed a separate, likely
+  unrelated bug: single-page monitoring targets, where the patch is
+  mathematically a no-op, still swung from 0.94 to 0.34 accuracy between
+  runs.
+- Five follow-up tests are proposed to isolate the remaining bugs (§5).
 
-## What was measured, and how
+## 1. Introduction
 
-Each config is a JSON workload spec: a memory region plus one or more
-**tracks** — a spatial profile (uniform / hotspot / zipf / gaussian) crossed
-with a temporal one (const / sine / square / ramp / steps). A hammer process
-touches pages according to that spec while two independent observers watch
-the same address range:
+DAMON (Data Access MONitor) is the Linux kernel's built-in access-frequency
+tracker: it samples a process's page-table Accessed bits and reports, per
+monitored memory region, how often that region was touched. `damo report
+heatmap` turns a DAMON recording into a time × address grid of access
+frequencies — the primary way a human (or an automated policy) reads
+"where and when was this process's memory hot."
+
+That grid is only as trustworthy as the code that bins DAMON's variable-size,
+variable-lifetime regions into fixed heatmap pixels. This evaluation checks
+one specific step in that binning: when a single DAMON region only partly
+overlaps a heatmap column on the address axis, how much of that region's
+reported frequency should the column receive? The locally-running damo build
+had been patched to give the column the **full** frequency on any nonzero
+overlap; upstream's original code weights it by the **overlap fraction**.
+This report measures which one tracks reality better, and where either one
+still fails.
+
+## 2. Methods
+
+**Workload generation.** Each of 50 JSON configs (`memtest/configs/`)
+specifies a memory region and one or more **tracks** — a spatial profile
+(uniform / hotspot / zipf / gaussian) crossed with a temporal one (const /
+sine / square / ramp / steps). A hammer process touches pages accordingly
+for the config's duration.
+
+**Two independent observers watch the same run:**
 
 - **Ground truth (GT)** — the harness's own count of real page touches per
-  heatmap column, divided by duration. What actually happened.
+  heatmap column, divided by duration. What actually happened, independent
+  of DAMON entirely.
 - **DAMON** — `damo record` against the hammer's PID (`fvaddr` ops, sample
   5ms / aggregate 100ms / ops-update 1s), then `damo report heatmap --resol`
   to read back DAMON's own Hz per column. What the kernel monitor believed
   happened.
 
-The two runs differ in exactly one place: `damo_report_heatmap.py`'s
-`add_pixel_heat()`, which decides how a DAMON region's frequency gets divided
-across the heatmap columns it overlaps:
+**The one variable under test** is `damo_report_heatmap.py`'s
+`add_pixel_heat()`, which decides how a DAMON region's frequency is divided
+across the heatmap columns it overlaps on the address axis:
 
 ```
 # before — any nonzero overlap gets the region's full frequency
@@ -47,10 +74,11 @@ heat = heat_val * account_time
 heat = heat_val * account_time * account_sz   # account_sz = px ∩ region, bytes
 ```
 
-Verified the two damo installs (system pip v3.3.0 vs the `~/damo` checkout
-used for the "after" run) are otherwise identical — a full source diff
-turned up only two unrelated files, neither on the record/report code path
-exercised here — so the delta below isolates this one change.
+Every workload was run once against each version (50 configs × 5 reps ×
+2 versions = 500 runs, 0 failed). The two damo installs used (system pip
+v3.3.0 for "before", a `~/damo` git checkout reverted to its own upstream
+HEAD for "after") were diffed against each other outside this one function
+to confirm no other code-path difference could explain the results.
 
 **Metric.** Per heatmap column:
 
@@ -58,20 +86,27 @@ exercised here — so the delta below isolates this one change.
 err = |GT − DAMON| / (GT + DAMON + 1)
 ```
 
-Bounded in `[0, 1)` so a cold column (GT≈0) can't blow up into a 50× ratio
-the way a plain percentage error does. Accuracy = `1 − err`, averaged over
-all columns in a run, then over 5 reps. Pearson correlation between the GT
-and DAMON vectors is reported alongside, as a scale-independent read on
-whether the hot/cold *shape* was found at all.
+Bounded in `[0, 1)`, so a cold column (GT≈0) can't blow up into a 50×
+outlier ratio the way a plain percentage error does — the `+1` (Hz) term is
+the only regularization needed. Accuracy = `1 − err`, averaged over all
+columns in a run, then over 5 reps per config. Pearson correlation between
+the GT and DAMON vectors is reported alongside as a scale-independent read
+on whether the hot/cold *shape* was found at all, separate from absolute
+calibration.
 
-## Headline numbers (49 configs)
+`02_single_page_const_high` was excluded from all of the below: independently
+confirmed broken (see finding 2), leaving 49 scored configs.
+
+## 3. Results
+
+### 3.1 Headline numbers (49 configs)
 
 | | Before | After | Δ |
 |---|---|---|---|
 | Accuracy (1 − err, avg) | 0.770 | 0.816 | **+0.046** |
 | GT↔DAMON shape correlation (avg Pearson r) | 0.39 | 0.73 | **+0.34** |
 
-## Conclusions
+### 3.2 Findings behind the summary
 
 **1. Shape fidelity nearly doubled; absolute accuracy moved less.** Mean
 accuracy only rose 0.770→0.816, but GT↔DAMON correlation jumped 0.39→0.73.
@@ -115,7 +150,16 @@ real story is instability: something about a 2-page region or a 3-step
 temporal edge appears to land right on a pixel or region boundary, where
 small timing jitter flips which side an access is credited to.
 
-## Proposed next tests
+## 4. Where this lives
+
+| What | Path |
+|---|---|
+| Baseline run ("before") | `memtest/results/<config>/rep{1..5}_*.log` |
+| Patched run ("after") | `memtest/results_spatial_weighted/<config>/rep{1..5}_*.log` |
+| Scorer | `memtest/scripts/score_results.py` |
+| Excluded | `02_single_page_const_high` — broken workload, dropped |
+
+## 5. Proposed next tests
 
 1. **Isolate the 1-page DAMON accounting bug.** Bypass the heatmap layer
    entirely for 01/02-style configs: dump raw kdamond region snapshots over
@@ -138,7 +182,7 @@ small timing jitter flips which side an access is credited to.
    identified by name, a wider rep count tightens confidence intervals
    across all 50 without re-deriving which ones need it.
 
-## Full results (sorted by Δ accuracy)
+## Appendix: full results (sorted by Δ accuracy)
 
 | Config | Flags | Before acc | After acc | Δ | Before corr | After corr |
 |---|---|---|---|---|---|---|
