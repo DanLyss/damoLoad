@@ -1,8 +1,5 @@
 # Spatial-weighted heatmap: accuracy evaluation
 
-Rendered version of this analysis (chart + sortable table):
-https://claude.ai/code/artifact/117dcb2d-7424-4216-a53d-034521e32d8e
-
 ## Executive summary
 
 Restoring upstream damo's per-column spatial overlap weighting in the
