@@ -12,7 +12,26 @@ damoLoad/
 │       ├── build_kdamonds_sweep.py        — kdamonds JSON builder for one nr_regions sweep point
 │       ├── run_nr_regions_sweep.sh        — orchestrates the full min_nr_regions/max_nr_regions sweep
 │       └── nr_regions_sweep_report.py     — computes and plots the 6-line sweep chart
-└── hammer/          — minimal single-file load generator for quick experiments
+├── hammer/          — minimal single-file load generator for quick experiments
+│
+├── generate.py / reconstruct_heatmap.py / format_raw.py / simulate.py
+│                    — Andrey's compressed-passport model: synthesizes a
+│                      synthetic io-format trace from a 10-channel
+│                      statistical "passport" (code3.json) + geometry
+│                      (meta.json) — see damo_replay.md for why a naive
+│                      replay of a recorded trace doesn't work
+├── andrey_hammer/   — real-time C port of that same model: computes the
+│                      profile itself, per frame, and drives LIVE memory
+│                      accesses on its own mmap'd region (not a pre-
+│                      rendered schedule) — the "C program" stage of the
+│                      passport → live-access pipeline
+├── run_andrey.sh    — automated runner for andrey_hammer: build → replay
+│                      → record → compare (mirrors run_memtest.sh)
+└── compare_io.py    — direct io-format vs io-format comparison (address-
+                       fraction-normalized shape metrics + ASCII heatmap);
+                       for comparing an original trace's io-format dump
+                       against a fresh `damo report access --raw` of
+                       whatever DAMON observed during an andrey_hammer run
 ```
 
 ## Quick Start
