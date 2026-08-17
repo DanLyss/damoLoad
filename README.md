@@ -2,6 +2,10 @@
 
 Tools for generating controlled memory access workloads and comparing them against what [DAMON](https://docs.kernel.org/mm/damon/index.html) actually observes.
 
+> **Working on the `andrey_hammer` / compressed-passport pipeline?** Start
+> with [`ANDREY_PIPELINE.md`](ANDREY_PIPELINE.md) — status, exact file
+> formats, build/test commands, what's validated and what's still missing.
+
 ```
 damoLoad/
 ├── run_memtest.sh   — full automated runner: build → record → compare
