@@ -1,0 +1,238 @@
+#!/usr/bin/env python3
+"""
+Linux DAMON Heatmap Core Modeler - Module 5-Raw (Raw Log Generator)
+Synthesizes standard DAMON raw region trace logs from reconstructed raw heatmaps.
+
+Strict mode: No hidden defaults/fallbacks. Raises explicit exceptions on missing keys.
+"""
+
+from __future__ import annotations
+import argparse
+import csv
+import json
+import numpy as np
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Модуль 5-Raw: Генерация сырого лога регионов DAMON из CSV-хитмапы"
+    )
+    parser.add_argument(
+        "--input-raw-heatmap",
+        required=True,
+        help="Путь к промежуточной сырой хитмапе (CSV из Модуля 4)"
+    )
+    parser.add_argument(
+        "--input-meta",
+        required=True,
+        help="Путь к JSON мета-паспорту (геометрия адресов и параметры)"
+    )
+    parser.add_argument(
+        "--output-raw-log",
+        required=True,
+        help="Путь для сохранения итогового сырого лога DAMON (.txt)"
+    )
+    parser.add_argument(
+        "--merge-tolerance",
+        type=float,
+        default=0.5,
+        help="Порог разности nr_accesses для объединения соседних бинов в один регион"
+    )
+    return parser.parse_args()
+
+
+def format_length(size_bytes: int) -> str:
+    """Форматирует размер региона в каноничные единицы DAMON (KiB, MiB, GiB, TiB)."""
+    if size_bytes >= 1024**4:
+        return f"{size_bytes / (1024**4):8.3f} TiB"
+    elif size_bytes >= 1024**3:
+        return f"{size_bytes / (1024**3):8.3f} GiB"
+    elif size_bytes >= 1024**2:
+        return f"{size_bytes / (1024**2):8.3f} MiB"
+    elif size_bytes >= 1024:
+        return f"{size_bytes / 1024:8.3f} KiB"
+    else:
+        return f"{size_bytes:8d} B"
+
+
+def get_address_bounds(meta: dict) -> tuple[int, int]:
+    """
+    Извлекает и выравнивает по 4 KiB границы адресов из метаданных.
+    Без фолбэков: выбрасывает KeyError, если ключи отсутствуют.
+    """
+    phys = meta.get('physical_bounds', {})
+    geom = meta.get('matrix_geometry', {})
+
+    start_raw = phys.get('active_min_addr') or meta.get('start_addr') or geom.get('start_addr')
+    end_raw = phys.get('active_max_addr') or meta.get('end_addr') or geom.get('end_addr')
+
+    if start_raw is None or end_raw is None:
+        raise KeyError(
+            "В метаданных JSON не найдены границы адресов! "
+            "Ожидались ключи 'physical_bounds.active_min_addr/active_max_addr' или 'start_addr/end_addr'."
+        )
+
+    start_addr = int(str(start_raw), 0) if isinstance(start_raw, str) else int(start_raw)
+    end_addr = int(str(end_raw), 0) if isinstance(end_raw, str) else int(end_raw)
+
+    if end_addr <= start_addr:
+        raise ValueError(f"Конечный адрес ({hex(end_addr)}) должен быть больше начального ({hex(start_addr)})")
+
+    # Выравнивание по границе страниц 4 KiB (4096 байт)
+    PAGE_SIZE = 4096
+    start_addr = (start_addr // PAGE_SIZE) * PAGE_SIZE
+    end_addr = ((end_addr + PAGE_SIZE - 1) // PAGE_SIZE) * PAGE_SIZE
+
+    return start_addr, end_addr
+
+
+def get_time_multiplier(time_col_name: str) -> float:
+    """Определяет коэффициент перевода времени в ms. Выбрасывает ValueError, если единица неизвестна."""
+    col_lower = time_col_name.lower()
+    if "ms" in col_lower:
+        return 1.0
+    elif "us" in col_lower:
+        return 1e-3
+    elif "sec" in col_lower or "s" in col_lower:
+        return 1e3
+    else:
+        raise ValueError(
+            f"Не удалось определить единицы измерения времени из заголовка колонки: '{time_col_name}'. "
+            "Ожидались 'time_ms', 'time_us' или 'time_s'."
+        )
+
+
+def run_raw_log_generation():
+    args = parse_arguments()
+
+    # 1. Чтение метаданных
+    with open(args.input_meta, 'r', encoding='utf-8') as f:
+        meta = json.load(f)
+
+    start_addr, end_addr = get_address_bounds(meta)
+    total_bytes = end_addr - start_addr
+
+    # 2. Считывание CSV-хитмапы
+    time_vals = []
+    heatmap_rows = []
+
+    with open(args.input_raw_heatmap, 'r', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        header = next(reader)
+        if not header:
+            raise ValueError(f"CSV файл {args.input_raw_heatmap} пуст!")
+
+        time_col_name = header[0]
+        time_scale_to_ms = get_time_multiplier(time_col_name)
+
+        for row in reader:
+            if not row:
+                continue
+            time_vals.append(float(row[0]) * time_scale_to_ms)
+            heatmap_rows.append([float(val) for val in row[1:]])
+
+    heatmap = np.array(heatmap_rows, dtype=float)
+    num_frames, cols = heatmap.shape
+
+    if num_frames == 0:
+        raise ValueError("Хитмапа не содержит данных (0 кадров)!")
+
+    # Предрасчет пространственных бинов (выравнивание по 4 KiB)
+    PAGE_SIZE = 4096
+    bin_boundaries = []
+    for c in range(cols + 1):
+        raw_addr = start_addr + (c * total_bytes) / cols
+        aligned_addr = int(round(raw_addr / PAGE_SIZE)) * PAGE_SIZE
+        bin_boundaries.append(aligned_addr)
+    bin_boundaries[0] = start_addr
+    bin_boundaries[-1] = end_addr
+
+    # Трекинг структурного возраста регионов: (start, end) -> age
+    prev_regions_age: dict[tuple[int, int], int] = {}
+
+    # 3. Генерация текстового лога DAMON
+    base_time_str = meta.get("base_time_absolute", "")
+    header_line = f"base_time_absolute: {base_time_str} data source: unknown\n\n" if base_time_str else ""
+
+    with open(args.output_raw_log, 'w', encoding='utf-8') as out_f:
+        if header_line:
+            out_f.write(header_line)
+
+        for t_idx in range(num_frames):
+            t_start_ms = time_vals[t_idx]
+
+            if t_idx < num_frames - 1:
+                dt_ms = time_vals[t_idx + 1] - t_start_ms
+            elif num_frames > 1:
+                dt_ms = time_vals[1] - time_vals[0]
+            else:
+                raise ValueError("Невозможно рассчитать длительность кадра для одиночного снимка.")
+
+            t_end_ms = t_start_ms + dt_ms
+
+            row_intensities = heatmap[t_idx, :]
+            row_accesses = np.round(row_intensities).astype(int)
+
+            # Динамическое сшивание соседних бинов
+            merged_regions = []
+            curr_start_bin = 0
+            curr_acc = row_accesses[0]
+
+            for c in range(1, cols):
+                acc = row_accesses[c]
+
+                if abs(acc - curr_acc) <= args.merge_tolerance:
+                    continue
+                else:
+                    reg_start_addr = bin_boundaries[curr_start_bin]
+                    reg_end_addr = bin_boundaries[c]
+                    if reg_end_addr > reg_start_addr:
+                        merged_regions.append((reg_start_addr, reg_end_addr, curr_acc))
+
+                    curr_start_bin = c
+                    curr_acc = acc
+
+            # Последний регион кадра
+            reg_start_addr = bin_boundaries[curr_start_bin]
+            reg_end_addr = bin_boundaries[cols]
+            if reg_end_addr > reg_start_addr:
+                merged_regions.append((reg_start_addr, reg_end_addr, curr_acc))
+
+            # Расчет структурного age
+            current_regions_age: dict[tuple[int, int], int] = {}
+            final_regions = []
+
+            for r_start, r_end, r_acc in merged_regions:
+                key = (r_start, r_end)
+                if key in prev_regions_age:
+                    age = prev_regions_age[key] + 1
+                else:
+                    age = 1
+                current_regions_age[key] = age
+                final_regions.append((r_start, r_end, r_acc, age))
+
+            prev_regions_age = current_regions_age
+
+            # Форматированный вывод кадра DAMON
+            out_f.write(f"monitoring_start:         {t_start_ms:10.3f} ms\n")
+            out_f.write(f"monitoring_end:           {t_end_ms:10.3f} ms\n")
+            out_f.write(f"monitoring_duration:      {dt_ms:10.3f} ms\n")
+            out_f.write("target_id: 0\n")
+            out_f.write(f"nr_regions: {len(final_regions)}\n")
+            out_f.write("# start_addr     end_addr        length  nr_accesses   age\n")
+
+            for r_start, r_end, r_acc, r_age in final_regions:
+                start_hex = f"{r_start:x}"
+                end_hex = f"{r_end:x}"
+                len_str = format_length(r_end - r_start)
+
+                out_f.write(f"{start_hex}-{end_hex} ({len_str}) {r_acc:>11} {r_age:>5}\n")
+
+            out_f.write("\n")
+
+    print(f"[OK] Raw DAMON trace log generated successfully ({num_frames} snapshots).")
+    print(f"[INFO] Output file saved to: {args.output_raw_log}")
+
+
+if __name__ == "__main__":
+    run_raw_log_generation()

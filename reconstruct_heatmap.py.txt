@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""
+Linux DAMON Heatmap Core Modeler - Module 4 (Spatial Decompression - Part 1)
+Super-Gaussian Mixture Model Reconstruction Engine.
+Version 8.0: Reconstructs profiles and outputs raw float heatmap matrix to CSV.
+"""
+
+import math
+import numpy as np
+import json
+import csv
+import argparse
+
+def run_reconstruction(input_traj, input_meta, output_raw_heatmap):
+    # 1. Загрузка системного мета-паспорта геометрии и параметра формы
+    with open(input_meta, 'r', encoding='utf-8') as f:
+        meta = json.load(f)
+    
+    cols = meta['matrix_geometry']['cols']
+    p = meta.get('super_gaussian_p', 6.0)
+    
+    norm_const = p / ((2 ** (1.0 + 1.0 / p)) * math.gamma(1.0 / p))
+    profiles_list = []
+    
+    # 2. Восстановление непрерывного распределения по всей длине траектории
+    with open(input_traj, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        x = np.arange(cols)
+        
+        for row in reader:
+            # Считываем только 3 компоненты вместо 5
+            w = [float(row[f'w{i}']) for i in range(1, 4)]
+            mu = [float(row[f'mu{i}']) for i in range(1, 4)]
+            sigma = [float(row[f'sigma{i}']) for i in range(1, 4)]
+            M_raw = float(row['M_raw'])
+            
+            profile = np.zeros(cols)
+            for k in range(3):
+                sig_safe = max(sigma[k], 0.5)
+                pdf_norm = norm_const / sig_safe
+                exponent = -0.5 * (np.abs(x - mu[k]) / sig_safe) ** p
+                pdf = pdf_norm * np.exp(exponent)
+                profile += w[k] * pdf
+            
+            if np.sum(profile) > 0:
+                profile = (profile / np.sum(profile)) * M_raw
+            
+            profiles_list.append(profile)
+
+    heatmap = np.array(profiles_list)
+    actual_rows = heatmap.shape[0]
+
+    # 3. Сохранение промежуточной сырой хитмапы в CSV
+    np.savetxt(output_raw_heatmap, heatmap, delimiter=',', fmt='%.6f')
+    print(f"[OK] Raw heatmap reconstructed perfectly ({actual_rows}x{cols}) using Super-Gaussian (p={p}).")
+    print(f"[INFO] Intermediate raw matrix saved to: {output_raw_heatmap}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Модуль 4: Декодирование 10-мерных траекторий в сырую хитмапу CSV")
+    parser.add_argument("--input-sim-traj", required=True, help="Путь к симулированной 10-канальной траектории CSV")
+    parser.add_argument("--input-meta", required=True, help="Путь к входному JSON мета-паспорту (нужен для геометрии)")
+    parser.add_argument("--output-raw-heatmap", required=True, help="Путь для сохранения промежуточной сырой хитмапы (CSV)")
+    args = parser.parse_args()
+    
+    run_reconstruction(args.input_sim_traj, args.input_meta, args.output_raw_heatmap)

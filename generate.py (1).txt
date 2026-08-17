@@ -1,0 +1,437 @@
+#!/usr/bin/env python3
+"""
+Linux DAMON Heatmap Core Modeler - Single-Pass Streaming Simulator.
+Unifies trajectory waveform synthesis (Module 3), Super-Gaussian spatial 
+reconstruction (Module 4), and DAMON region formatting with age tracking (Module 5-Raw)
+into a single, zero-intermediate-I/O streaming loop over time.
+
+Strict mode: No implicit fallbacks or hidden default address bounds.
+"""
+
+from __future__ import annotations
+import argparse
+import json
+import math
+import sys
+import numpy as np
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Однопроходный симулятор DAMON (Модули 3 + 4 + 5-Raw в одном цикле)"
+    )
+    parser.add_argument(
+        "--passport",
+        required=True,
+        help="Путь к 10-канальному JSON паспорту параметров траектории"
+    )
+    parser.add_argument(
+        "--meta",
+        required=True,
+        help="Путь к JSON мета-паспорту системной геометрии"
+    )
+    parser.add_argument(
+        "--output-raw-log",
+        required=True,
+        help="Путь для сохранения итогового сырого лога DAMON (.txt)"
+    )
+    parser.add_argument(
+        "--steps",
+        type=int,
+        default=None,
+        help="Явное число шагов симуляции (переопределяет динамический расчет)"
+    )
+    parser.add_argument(
+        "-e", "--extrapolation-factor",
+        type=float,
+        default=1.0,
+        help="Коэффициент экстраполяции относительно matrix_geometry.rows (по умолчанию: 1.0)"
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Random seed для воспроизводимости симуляции (по умолчанию: 0)"
+    )
+    parser.add_argument(
+        "--merge-tolerance",
+        type=float,
+        default=0.5,
+        help="Порог разности nr_accesses для объединения соседних бинов в один регион"
+    )
+    parser.add_argument(
+        "--time-step-ratio",
+        type=float,
+        default=1.0,
+        help="Коэффициент временного шага dt (по умолчанию: 1.0)"
+    )
+    parser.add_argument(
+        "--legacy-clip",
+        action="store_true",
+        help="Включить режим верхнего клиппинга для M_raw"
+    )
+    return parser.parse_args()
+
+
+def format_length(size_bytes: int) -> str:
+    """Форматирует размер региона в каноничные единицы DAMON (KiB, MiB, GiB, TiB)."""
+    if size_bytes >= 1024**4:
+        return f"{size_bytes / (1024**4):8.3f} TiB"
+    elif size_bytes >= 1024**3:
+        return f"{size_bytes / (1024**3):8.3f} GiB"
+    elif size_bytes >= 1024**2:
+        return f"{size_bytes / (1024**2):8.3f} MiB"
+    elif size_bytes >= 1024:
+        return f"{size_bytes / 1024:8.3f} KiB"
+    else:
+        return f"{size_bytes:8d} B"
+
+
+def get_address_bounds(meta: dict) -> tuple[int, int]:
+    """Извлекает и выравнивает по 4 KiB границы адресов из метаданных без дефолтов."""
+    phys = meta.get('physical_bounds', {})
+    geom = meta.get('matrix_geometry', {})
+
+    start_raw = phys.get('active_min_addr') or meta.get('start_addr') or geom.get('start_addr')
+    end_raw = phys.get('active_max_addr') or meta.get('end_addr') or geom.get('end_addr')
+
+    if start_raw is None or end_raw is None:
+        raise KeyError(
+            "В метаданных JSON не найдены границы адресов! "
+            "Ожидались ключи 'physical_bounds.active_min_addr/active_max_addr' или 'start_addr/end_addr'."
+        )
+
+    start_addr = int(str(start_raw), 0) if isinstance(start_raw, str) else int(start_raw)
+    end_addr = int(str(end_raw), 0) if isinstance(end_raw, str) else int(end_raw)
+
+    if end_addr <= start_addr:
+        raise ValueError(f"Конечный адрес ({hex(end_addr)}) должен быть больше начального ({hex(start_addr)})")
+
+    PAGE_SIZE = 4096
+    start_addr = (start_addr // PAGE_SIZE) * PAGE_SIZE
+    end_addr = ((end_addr + PAGE_SIZE - 1) // PAGE_SIZE) * PAGE_SIZE
+
+    return start_addr, end_addr
+
+
+def get_time_step_duration_ms(meta: dict, dt_ratio: float) -> tuple[float, float]:
+    """
+    Рассчитывает начальное время (ms) и длительность кадра (ms) из метаданных.
+    Без фолбэков: выбрасывает KeyError при отсутствии временных ключей.
+    """
+    geom = meta.get('matrix_geometry', {})
+    rows = geom.get('rows')
+    if rows is None or rows <= 0:
+        raise KeyError("В метаданных отсутствует или некорректен ключ 'matrix_geometry.rows'!")
+
+    if 'time_bounds_ms' in meta:
+        tb = meta['time_bounds_ms']
+        start_ms = float(tb['start_ms'])
+        end_ms = float(tb['end_ms'])
+    elif 'time_bounds_us' in meta:
+        tb = meta['time_bounds_us']
+        start_ms = float(tb['start_us']) / 1000.0
+        end_ms = float(tb['end_us']) / 1000.0
+    else:
+        raise KeyError(
+            "В метаданных JSON отсутствуют границы времени! "
+            "Ожидался ключ 'time_bounds_ms' или 'time_bounds_us'."
+        )
+
+    baseline_dt_ms = (end_ms - start_ms) / float(rows)
+    dt_ms = baseline_dt_ms * dt_ratio
+
+    return start_ms, dt_ms
+
+
+def run_simulation():
+    args = parse_arguments()
+    np.random.seed(args.seed)
+    dt = args.time_step_ratio
+
+    # 1. Загрузка конфигурационных паспортов
+    with open(args.meta, 'r', encoding='utf-8') as f:
+        meta = json.load(f)
+    with open(args.passport, 'r', encoding='utf-8') as f:
+        passport = json.load(f)
+
+    # 2. Извлечение параметров геометрии и границ
+    start_addr, end_addr = get_address_bounds(meta)
+    cols = meta['matrix_geometry'].get('cols')
+    if cols is None or cols <= 0:
+        raise KeyError("В метаданных отсутствует или некорректен ключ 'matrix_geometry.cols'!")
+
+    passport_rows = meta.get('matrix_geometry', {}).get('rows')
+    if passport_rows is None or passport_rows <= 0:
+        raise KeyError("В метаданных отсутствует или некорректен ключ 'matrix_geometry.rows'!")
+
+    # Динамический расчет итогового числа шагов симуляции T
+    if args.steps is not None:
+        t_sim = args.steps
+    else:
+        t_sim = int(np.round(passport_rows * args.extrapolation_factor))
+    t_sim = max(1, t_sim)
+
+    p_shape = meta.get('super_gaussian_p')
+    if p_shape is None:
+        raise KeyError("В метаданных отсутствует ключ 'super_gaussian_p'!")
+    p_shape = float(p_shape)
+
+    start_time_ms, frame_dt_ms = get_time_step_duration_ms(meta, dt)
+    total_bytes = end_addr - start_addr
+
+    # Предрасчет границ пространственных бинов (выравнивание по 4 KiB)
+    PAGE_SIZE = 4096
+    bin_boundaries = []
+    for c in range(cols + 1):
+        raw_addr = start_addr + (c * total_bytes) / cols
+        aligned_addr = int(round(raw_addr / PAGE_SIZE)) * PAGE_SIZE
+        bin_boundaries.append(aligned_addr)
+    bin_boundaries[0] = start_addr
+    bin_boundaries[-1] = end_addr
+
+    # Предрасчет Супер-Гауссовской константы нормировки
+    norm_const = p_shape / ((2.0 ** (1.0 + 1.0 / p_shape)) * math.gamma(1.0 / p_shape))
+    x_grid = np.arange(cols, dtype=float)
+
+    # 3. Подготовка параметров и физических констант каскада AR(1) для 10 каналов
+    channel_keys = [
+        "w1", "mu1", "sigma1",
+        "w2", "mu2", "sigma2",
+        "w3", "mu3", "sigma3",
+        "M_raw"
+    ]
+
+    weight_indices = [0, 3, 6]
+    center_indices = [1, 4, 7]
+    width_indices = [2, 5, 8]
+
+    # Векторные структуры предрассчитанных параметров
+    p_k = np.zeros(10)
+    p_b = np.zeros(10)
+    p_sigma_x = np.zeros(10)
+    p_f_dom = np.zeros(10)
+    p_a_dom = np.zeros(10)
+    p_phi_start = np.zeros(10)
+    p_outlier_rate = np.zeros(10)
+    p_phi_v = np.zeros(10)
+    p_phi_z = np.zeros(10)
+    p_alpha = np.zeros(10)
+    p_mu_eps = np.zeros(10)
+    p_std_z = np.zeros(10)
+    p_scale_factor = np.zeros(10)
+    p_theo_fluct_std = np.zeros(10)
+
+    for idx, v_key in enumerate(channel_keys):
+        if v_key not in passport:
+            raise KeyError(f"В паспорте траектории отсутствует обязательный канал '{v_key}'!")
+
+        m = passport[v_key]
+        p_k[idx] = m['trend_slope'] * dt
+        p_b[idx] = m['trend_intercept']
+        p_sigma_x[idx] = m['std_dev']
+        gamma_x = m['skewness']
+        p_f_dom[idx] = m['f_dom']
+        p_a_dom[idx] = m['a_dom']
+        p_phi_start[idx] = m['phi_start']
+        p_outlier_rate[idx] = m.get('outlier_rate', 0.0) * dt
+
+        rho_0 = m.get('autocorrelation_lag1', 0.8)
+        lam = -np.log(max(1e-4, min(rho_0, 0.9999)))
+
+        phi_v = np.exp(-lam * dt)
+        phi_z = np.exp(-lam * dt)
+        p_phi_v[idx] = phi_v
+        p_phi_z[idx] = phi_z
+
+        alpha = np.clip(gamma_x * 0.5, -0.9, 0.9)
+        p_alpha[idx] = alpha
+        mu_eps = alpha * np.sqrt(2.0 / np.pi)
+        p_mu_eps[idx] = mu_eps
+
+        s2 = 1.0 + (alpha**2) * (1.0 - 2.0 / np.pi)
+        denom1 = max(1e-12, 1.0 - phi_v**2)
+        denom2 = max(1e-12, 1.0 - phi_z**2)
+        denom3 = max(1e-12, 1.0 - phi_v * phi_z)
+        var_z = (dt**2 * s2 * (1.0 + phi_v * phi_z)) / (denom1 * denom2 * denom3)
+        p_std_z[idx] = np.sqrt(var_z)
+
+        num_val = dt * lam - 1.0 + np.exp(-dt * lam)
+        den_val = lam - 1.0 + np.exp(-lam)
+        sf = np.sqrt((num_val / (dt**2)) / max(1e-12, den_val))
+        p_scale_factor[idx] = sf
+
+        var_harmonic = (p_a_dom[idx] ** 2) / 2.0
+        var_tot = var_harmonic + (p_sigma_x[idx] * sf)**2
+        p_theo_fluct_std[idx] = np.sqrt(var_tot) if var_tot > 1e-6 else 1e-6
+
+    # Векторы состояния фильтров СДУ
+    v_states = np.zeros(10)
+    z_states = np.zeros(10)
+
+    # Трекинг структурного возраста регионов DAMON
+    prev_regions_age: dict[tuple[int, int], int] = {}
+
+    # 4. ЕДИНЫЙ СКВОЗНОЙ ЦИКЛ СИМУЛЯЦИИ ПО ВРЕМЕНИ
+    base_time_str = meta.get("base_time_absolute", "")
+
+    with open(args.output_raw_log, 'w', encoding='utf-8') as out_f:
+        if base_time_str:
+            out_f.write(f"base_time_absolute: {base_time_str} data source: unknown\n\n")
+
+        for t_idx in range(t_sim):
+            t_curr = t_idx * dt
+            t_start_ms = start_time_ms + t_idx * frame_dt_ms
+            t_end_ms = t_start_ms + frame_dt_ms
+
+            # -----------------------------------------------------------------
+            # ШАГ A: Синтез 10-мерной точки траектории (бывший Модуль 3)
+            # -----------------------------------------------------------------
+            channel_vals = np.zeros(10)
+
+            for p in range(10):
+                xi = np.random.normal(0, 1)
+                eps_raw = xi * (1.0 + p_alpha[p]) if xi >= 0.0 else xi * (1.0 - p_alpha[p])
+                epsilon = eps_raw - p_mu_eps[p]
+
+                v_states[p] = p_phi_v[p] * v_states[p] + epsilon
+                z_states[p] = p_phi_z[p] * z_states[p] + dt * v_states[p]
+
+                z_scaled = z_states[p] / p_std_z[p]
+
+                trend = p_b[p] + p_k[p] * t_idx
+                harmonic = p_a_dom[p] * np.cos(2.0 * np.pi * p_f_dom[p] * t_curr + p_phi_start[p])
+
+                raw_fluct = harmonic + (p_sigma_x[p] * p_scale_factor[p]) * z_scaled
+                fluct_clean = (raw_fluct / p_theo_fluct_std[p]) * p_sigma_x[p]
+                X_raw = trend + fluct_clean
+
+                # Выбросы (outliers)
+                if p_outlier_rate[p] > 0.0 and np.random.binomial(1, np.clip(p_outlier_rate[p], 0.0, 1.0)):
+                    m_chan = passport[channel_keys[p]]
+                    out_mean = m_chan.get('outlier_mean', 0.0)
+                    out_std = m_chan.get('outlier_std', 0.0)
+                    out_skew = m_chan.get('outlier_skewness', 0.0)
+
+                    xi_out = np.random.normal(0, 1)
+                    alpha_out = np.clip(out_skew * 0.5, -0.9, 0.9)
+                    eps_out_raw = xi_out * (1.0 + alpha_out) if xi_out >= 0.0 else xi_out * (1.0 - alpha_out)
+                    mu_out = alpha_out * np.sqrt(2.0 / np.pi)
+                    var_out = 1.0 + (alpha_out**2) * (1.0 - 2.0 / np.pi)
+                    eps_out_clean = (eps_out_raw - mu_out) / np.sqrt(var_out)
+
+                    outlier_val = out_mean + out_std * eps_out_clean
+                    thresh = 3.0 * (p_sigma_x[p] * p_scale_factor[p])
+                    if out_mean > 0:
+                        outlier_val = max(outlier_val, thresh)
+                    elif out_mean < 0:
+                        outlier_val = min(outlier_val, -thresh)
+                    X_raw += outlier_val
+
+                # Геометрический клиппинг
+                if p in weight_indices:
+                    channel_vals[p] = np.clip(X_raw, 0.0, 1.0)
+                elif p in center_indices:
+                    channel_vals[p] = np.clip(X_raw, 0.0, float(cols))
+                elif p in width_indices:
+                    channel_vals[p] = np.clip(X_raw, 0.5, float(cols) / 2.0)
+                else:
+                    max_m_raw = float(cols * 9.0) if args.legacy_clip else None
+                    channel_vals[p] = np.clip(X_raw, 0.0, max_m_raw)
+
+            # Энергосберегающая L1-нормировка весов
+            w_sum = channel_vals[0] + channel_vals[3] + channel_vals[6]
+            w_sum = max(w_sum, 1e-12)
+            w1 = channel_vals[0] / w_sum
+            mu1 = channel_vals[1]
+            sig1 = channel_vals[2]
+
+            w2 = channel_vals[3] / w_sum
+            mu2 = channel_vals[4]
+            sig2 = channel_vals[5]
+
+            w3 = channel_vals[6] / w_sum
+            mu3 = channel_vals[7]
+            sig3 = channel_vals[8]
+
+            M_raw = channel_vals[9]
+
+            # -----------------------------------------------------------------
+            # ШАГ B: Пространственное раскрытие в профиль (бывший Модуль 4)
+            # -----------------------------------------------------------------
+            profile = np.zeros(cols, dtype=float)
+            modes = [(w1, mu1, sig1), (w2, mu2, sig2), (w3, mu3, sig3)]
+
+            for w_k, mu_k, sig_k in modes:
+                sig_safe = max(sig_k, 0.5)
+                pdf_norm = norm_const / sig_safe
+                exponent = -0.5 * (np.abs(x_grid - mu_k) / sig_safe) ** p_shape
+                profile += w_k * (pdf_norm * np.exp(exponent))
+
+            prof_sum = np.sum(profile)
+            if prof_sum > 0:
+                profile = (profile / prof_sum) * M_raw
+
+            # -----------------------------------------------------------------
+            # ШАГ C: Сшивание бинов, age-трекинг и запись лога (бывший Модуль 5-Raw)
+            # -----------------------------------------------------------------
+            row_accesses = np.round(profile).astype(int)
+
+            merged_regions = []
+            curr_start_bin = 0
+            curr_acc = row_accesses[0]
+
+            for c in range(1, cols):
+                acc = row_accesses[c]
+                if abs(acc - curr_acc) <= args.merge_tolerance:
+                    continue
+                else:
+                    reg_start_addr = bin_boundaries[curr_start_bin]
+                    reg_end_addr = bin_boundaries[c]
+                    if reg_end_addr > reg_start_addr:
+                        merged_regions.append((reg_start_addr, reg_end_addr, curr_acc))
+                    curr_start_bin = c
+                    curr_acc = acc
+
+            reg_start_addr = bin_boundaries[curr_start_bin]
+            reg_end_addr = bin_boundaries[cols]
+            if reg_end_addr > reg_start_addr:
+                merged_regions.append((reg_start_addr, reg_end_addr, curr_acc))
+
+            # Расчет физического age
+            current_regions_age: dict[tuple[int, int], int] = {}
+            final_regions = []
+
+            for r_start, r_end, r_acc in merged_regions:
+                key = (r_start, r_end)
+                if key in prev_regions_age:
+                    age = prev_regions_age[key] + 1
+                else:
+                    age = 1
+                current_regions_age[key] = age
+                final_regions.append((r_start, r_end, r_acc, age))
+
+            prev_regions_age = current_regions_age
+
+            # Форматированный вывод снимка в файл
+            out_f.write(f"monitoring_start:         {t_start_ms:10.3f} ms\n")
+            out_f.write(f"monitoring_end:           {t_end_ms:10.3f} ms\n")
+            out_f.write(f"monitoring_duration:      {frame_dt_ms:10.3f} ms\n")
+            out_f.write("target_id: 0\n")
+            out_f.write(f"nr_regions: {len(final_regions)}\n")
+            out_f.write("# start_addr     end_addr        length  nr_accesses   age\n")
+
+            for r_start, r_end, r_acc, r_age in final_regions:
+                start_hex = f"{r_start:x}"
+                end_hex = f"{r_end:x}"
+                len_str = format_length(r_end - r_start)
+                out_f.write(f"{start_hex}-{end_hex} ({len_str}) {r_acc:>11} {r_age:>5}\n")
+
+            out_f.write("\n")
+
+    print(f"[OK] Streaming simulation completed successfully ({t_sim} steps executed).")
+    print(f"[INFO] Raw DAMON trace log saved to: {args.output_raw_log}")
+
+
+if __name__ == "__main__":
+    run_simulation()
