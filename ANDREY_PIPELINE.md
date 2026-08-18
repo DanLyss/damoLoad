@@ -157,35 +157,45 @@ now fixed:
   path — crashed every time. Fixed by always passing real `time_rows`
   (`$STEPS`) and `space_cols` (read from `meta.json`).
 
-With both fixed, all three `compare_io.py` comparisons ran clean:
+With both fixed, all three `compare_io.py` comparisons ran clean. **Numbers
+below are post-timeout-fix** (see "Known issues" — an earlier version of
+this table showed much worse time-profile r before that fix; kept here
+only as the current, correct baseline):
 
 | Compare | Shape r | Space r | Time r | Total accesses ratio |
 |---|---|---|---|---|
-| `sim_raw3.txt` vs DAMON's observation | 0.95 | 0.998 | 0.23 | **0.52** |
-| `sim_raw3.txt` vs `gt_to_io.py` (no DAMON) | 0.97 | 1.00 | 0.33 | **1.06** |
-| `gt_to_io.py` vs DAMON's observation | 0.96 | 0.999 | 0.27 | **0.49** |
-| `sim_raw3.txt` vs Andrey's own pipeline, different seed | 0.97 | 1.00 | **0.69** | 0.99 |
+| `sim_raw3.txt` vs DAMON's observation | 0.95 | ~1.00 | 0.31 | **0.63** |
+| `sim_raw3.txt` vs `gt_to_io.py` (no DAMON) | 0.97 | 1.00 | 0.31 | **1.06** |
+| `gt_to_io.py` vs DAMON's observation | 0.99 | 0.999 | **0.89** | **0.59** |
+| `sim_raw3.txt` vs Andrey's own pipeline, different seed | 0.97 | 1.00 | 0.69 | 0.99 |
 
 The last row is a baseline, not a result of this repo's code: it's
 `generate.py (1).txt` regenerating from the same `code3.json`+`meta3.json`
 with `--seed 0` instead of whatever seed produced `sim_raw3.txt`, compared
 against `sim_raw3.txt` itself. Since the model has genuine stochastic
-noise (the AR(1) cascade), no two runs — Python or C — will ever match
-time-for-time exactly; **0.69 is roughly the practical ceiling for
-time-profile r** given this passport, not 1.0. `andrey_hammer`'s 0.23–0.33
-is below that ceiling because of the pacing-drift bug below, not because
-C is inherently worse at reproducing the model.
+noise (the AR(1) cascade), no two *independent* runs — Python or C — will
+ever match time-for-time exactly; **0.69 is roughly the practical ceiling
+for time-profile r when comparing against a different random
+realization** of the same passport.
+
+The third row (`gt_to_io.py` vs DAMON's observation) is different in
+kind from the other three: both sides come from the *same* `andrey_hammer`
+run, so they're not independent realizations — DAMON is directly watching
+what `gt_to_io.py` also recorded. Once the `--timeout` truncation bug
+(below) was fixed, this correlation jumped to **0.89**, higher than the
+0.69 cross-seed ceiling, exactly as expected: same-run correspondence
+should be tighter than cross-run. The other two rows, compared against
+the independent `sim_raw3.txt`, stayed around 0.31 — bounded by that same
+~0.69 ceiling from below, with the remaining gap presumably being the
+residual (non-truncation) part of the pacing-drift bug, still open.
 
 Reading the rest: **spatial shape is essentially solved** (r≥0.95
 everywhere, space-profile r≈1.0) — the model math and the replay both
 reproduce the right hot/cold pattern. **Magnitude is accurate when DAMON
 isn't involved** (1.06 vs the original, 0.99 for Python-vs-Python) but
-**DAMON itself only sees about half the real activity** (0.52, 0.49) —
-consistent with DAMON's known 5ms-sample/200Hz-cap sampling limit (see
-root README's "Key DAMON Behaviors"), not a bug in this pipeline.
-**Time-profile r is low across the DAMON-involving comparisons**
-(0.23–0.33) — below even the DAMON-free Python-vs-Python baseline (0.69),
-confirming the timing-drift issue is in `andrey_hammer`'s own pacing loop.
+**DAMON itself only sees roughly 50-65% of the real activity** — consistent
+with DAMON's known 5ms-sample/200Hz-cap sampling limit (see root README's
+"Key DAMON Behaviors"), not a bug in this pipeline.
 
 ## Known issues
 
@@ -219,21 +229,44 @@ itself isn't affected by this for its real use case (both sides of a Level-2
 comparison go through `damo report access --raw_form`, so both are merged the
 same way and stay comparable).
 
-**Real, still-open issue: timing drift in the live pacing loop.** Under
-WSL2, `andrey_hammer.c`'s per-frame `sleep_ns(remaining_ns)` padding runs
-~20–30% over its nominal `frame_dt_ms` (measured directly, not inferred —
-`andrey_hammer` now writes `<gt.log>.frames` with each frame's real
-`start_ns`/`end_ns`; a 100.46ms nominal frame measured out to ~124ms
-actual in one run). It doesn't carry debt across frames — each frame just
-pads with whatever time is left, so overruns compound instead of being
-caught up. This degrades any comparison against *nominal* frame boundaries
-(time-profile r ~0.43 vs spatial r ~0.89 on otherwise-matching data, see
-`gt_to_io.py` below which sidesteps this by using the real `.frames`
-boundaries instead of nominal ones). Worth fixing with a debt-based pacing
-loop (accumulate `elapsed - frame_dt_ms` and let it eat into the next
-frame's budget, the same idea used elsewhere in this codebase for
-sub-frame access pacing) before trusting time-axis comparisons against
-nominal boundaries.
+**FIXED: `damo record --timeout` was truncating recordings early, not just
+misaligning them.** Root-caused by diffing real per-snapshot timestamps
+between `gt.log`'s io-format and DAMON's io-format from the *same* run:
+
+```
+gt.log (andrey_hammer, real):  254 frames, mean delta 139.03ms (stdev 11.15ms) -> 35.3s total
+DAMON (its own clock):         265 snaps,  mean delta 111.71ms (stdev  0.59ms) -> 29.6s total
+```
+
+DAMON's own aggregation cadence turned out to be rock-steady (barely any
+jitter) — it was never the noisy or drifting side. The real problem:
+`run_andrey.sh` sized `damo record --timeout` off the *nominal* duration
+(`steps × frame_dt_ms + 5s` ≈ 30.5s), but `andrey_hammer` actually took
+35.3s wall-clock to finish its 254 frames. So `damo record` hit its
+timeout and exited **~5.7s (~40 frames) before `andrey_hammer` actually
+finished** — the tail of the run was never recorded at all, not just
+recorded at the wrong offset. That alone was enough to wreck any
+time-profile correlation between the two, independent of anything else.
+
+Fixed by sizing `--timeout` at `2 × nominal + 15s` instead of `+5s` flat —
+deliberately generous rather than tuned to whatever overrun was last
+observed (it varies run to run — 24–38% over across different sessions).
+Verified: re-ran end-to-end, `gt_to_io.py`-vs-DAMON time-profile r went
+from **0.15 to 0.89**. See "Live DAMON test results" above for the full
+before/after picture.
+
+**Still open: the pacing drift itself.** `andrey_hammer.c`'s per-frame
+`sleep_ns(remaining_ns)` padding still runs frames over their nominal
+`frame_dt_ms` (measured: mean 139.03ms real vs 100.461ms nominal, i.e.
+~38% over, in the run above) — the `--timeout` fix above just stops that
+drift from truncating the DAMON recording, it doesn't fix the drift
+itself. It doesn't carry debt across frames — each frame just pads with
+whatever time is left, so overruns don't get caught up. This is likely
+still what accounts for the residual gap between the two `sim_raw3.txt`
+comparisons (~0.31) and the ~0.69 cross-seed ceiling established above —
+worth fixing with a debt-based pacing loop (accumulate `elapsed -
+frame_dt_ms` and let it eat into the next frame's budget) if closing that
+gap matters.
 
 **`andrey_hammer/gt_to_io.py`** — converts `gt.log` + `gt.log.frames`
 straight into an io-format text file, bypassing DAMON's own 5ms/200Hz
