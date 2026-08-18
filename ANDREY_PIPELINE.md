@@ -255,15 +255,31 @@ Verified: re-ran end-to-end, `gt_to_io.py`-vs-DAMON time-profile r went
 from **0.15 to 0.89**. See "Live DAMON test results" above for the full
 before/after picture.
 
-**Still open: the pacing drift itself.** `andrey_hammer.c`'s per-frame
-`sleep_ns(remaining_ns)` padding still runs frames over their nominal
-`frame_dt_ms` (measured: mean 139.03ms real vs 100.461ms nominal, i.e.
-~38% over, in the run above) — the `--timeout` fix above just stops that
-drift from truncating the DAMON recording, it doesn't fix the drift
-itself. It doesn't carry debt across frames — each frame just pads with
-whatever time is left, so overruns don't get caught up. Worth fixing with
-a debt-based pacing loop (accumulate `elapsed - frame_dt_ms` and let it
-eat into the next frame's budget).
+**Still open: the pacing drift itself.** `andrey_hammer.c`'s frames still
+run over their nominal `frame_dt_ms` (measured: mean 139.03ms real vs
+100.461ms nominal, ~38% over, in the run above) — the `--timeout` fix
+above just stops that drift from truncating the DAMON recording, it
+doesn't fix the drift itself.
+
+Root-caused with direct profiling (timers around each per-frame
+sub-phase, see `andrey_hammer/PACING_DRIFT_ISSUE.md` for the full
+writeup): **it's not the math.** Computing all 10 channels + the
+Super-Gaussian profile costs 13.69ms total across a 254-frame run
+(0.04% of total time). 99.43% of the time is inside `sleep_ns()` calls —
+of the 5007.71ms total overshoot, 4835.23ms (96.6%) is accumulated
+per-call oversleep in `clock_nanosleep()` itself under WSL2 (~87µs over
+the requested duration, per call, across 55737 calls) — this is also the
+actual mechanism behind the earlier-found r=0.705 touch-count/duration
+correlation: more touches per frame means more `sleep_ns()` calls means
+more accumulated oversleep, not slower computation.
+
+This also means the debt-based fix originally proposed here (compensate
+at the end of each frame) wouldn't help much — the overshoot accumulates
+*inside* the touch loop's many small sleeps, not in the final
+`remaining_ns` padding (which is usually already ≤0 by the time it's
+reached, i.e. there's nothing left to shrink further). See
+`andrey_hammer/PACING_DRIFT_ISSUE.md` for the fix directions that
+actually target the touch loop instead.
 
 The drift isn't uniform jitter, either — frame duration is genuinely
 **correlated with how much work is in the frame**: Pearson r = 0.705
