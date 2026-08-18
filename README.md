@@ -19,18 +19,15 @@ damoLoad/ (branch: andrey_math)
 │   └── sim_raw3.txt               — reference io-format trace (Python model output)
 │
 ├── 🐍 Andrey's pipeline (pure Python, offline, no real memory, no DAMON)
-│   ├── generate.py (1).txt        — ⚠️ actually the single-pass Module 3+4+5
-│   │                                 (misleading name — see ANDREY_PIPELINE.md)
-│   ├── simulate.py.txt             — ⚠️ actually Module 3 only (misleading name)
-│   ├── reconstruct_heatmap.py.txt   — Module 4
-│   └── format_raw.py.txt             — Module 5
+│   └── generate.py (1).txt        — single-pass Module 3+4+5: passport+meta
+│                                     → synthetic io-format trace
 │
 ├── ⚙️ This repo's pipeline (C, real time, real memory, real DAMON)
 │   └── andrey_hammer/
 │       ├── src/andrey_hammer.c   — the C driver: computes the profile itself,
 │       │                           per frame, and drives LIVE memory accesses
 │       │                           on its own mmap'd region (not a pre-
-│       │                           rendered file) — see damo_replay.md for why
+│       │                           rendered file)
 │       ├── Makefile
 │       ├── README.md              — design rationale for this tool specifically
 │       ├── gt_to_io.py             — converts gt.log → io-format text directly,
@@ -44,14 +41,10 @@ damoLoad/ (branch: andrey_math)
 │   ├── compare.py                — gt.log vs DAMON heatmap (reused dependency)
 │   └── compare_io.py              — direct io-format-vs-io-format shape comparison
 │
-├── 🔧 Supporting
-│   ├── scripts/build_kdamonds.py  — builds a kdamonds JSON config for damo
-│   │                                 record from a PID + region list
-│   └── patches/                    — required damo patches, see below
-│
-└── 📝 damo_replay.md            — investigation notes: why damo's own `replay`
-                                    subcommand doesn't reproduce a real address
-                                    space, and what this repo does differently
+└── 🔧 Supporting
+    ├── scripts/build_kdamonds.py  — builds a kdamonds JSON config for damo
+    │                                 record from a PID + region list
+    └── patches/                    — required damo patches, see below
 ```
 
 ## Quick Start
@@ -75,6 +68,23 @@ noise from everything else; see ANDREY_PIPELINE.md's "Three different
 comparisons" table for what each one actually answers). Full
 details, known issues, and lower-level manual test commands are in
 [`ANDREY_PIPELINE.md`](ANDREY_PIPELINE.md).
+
+### Where the input/output io-format files live
+
+**Input** (given, real, in the repo root): `code3.json` (passport) +
+`meta3.json` (geometry) → `sim_raw3.txt` is the reference io-format trace
+to compare against.
+
+**Output**, written by `run_andrey.sh` (defaults shown, all overridable via
+positional args — see `ANDREY_PIPELINE.md` for the full table):
+
+| File | Default path | What it is |
+|---|---|---|
+| DAMON's observation, as io-format text | `/root/andrey_damon.io.txt` | `damo report access --raw_form` on the live recording |
+| This run's own ground truth, as io-format text | `/tmp/andrey_gt.io.txt` | `gt_to_io.py`, no DAMON involved |
+| Raw ground truth log + frame boundaries | `/tmp/andrey_gt.log` (+ `.frames`) | written directly by `andrey_hammer` |
+| Raw DAMON recording (binary) | `/root/andrey_damon.data` | `damo record` |
+| Comparison reports (4 files) | `andrey_hammer/results/<name>_<time>...` | `compare.py` + `compare_io.py` |
 
 ## `compare.py` — Per-Region Heatmaps
 

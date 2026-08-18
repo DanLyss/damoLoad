@@ -23,31 +23,30 @@ code3.json + meta.json  ────────────►  andrey_hammer  
 
 ## Why it computes the profile itself, in C, per second
 
-The existing Python modules in this repo (`generate.py`, `reconstruct_heatmap.py`,
-`simulate.py.txt`) already implement this same model — but they write a
-*synthetic io-format text file* (see `sim_raw3.txt`). That's a description of
-a trace, not a trace happening. `andrey_hammer` ports the same math
-(3-mode Super-Gaussian spatial mixture, cascaded AR(1) temporal fluctuation
-with split-normal innovations, harmonic component, outliers — see the header
-comment in `src/andrey_hammer.c` for the exact correspondence to
-`generate.py`/`reconstruct_heatmap.py`) into C so the profile for "this
-second" is computed and immediately acted on, in the same process that's
-touching memory, at wall-clock cadence.
+The existing Python reference (`generate.py (1).txt`, in the repo root)
+already implements this same model — but it writes a *synthetic io-format
+text file* (see `sim_raw3.txt`). That's a description of a trace, not a
+trace happening. `andrey_hammer` ports the same math (3-mode Super-Gaussian
+spatial mixture, cascaded AR(1) temporal fluctuation with split-normal
+innovations, harmonic component, outliers — see the header comment in
+`src/andrey_hammer.c` for the exact correspondence) into C so the profile
+for "this second" is computed and immediately acted on, in the same process
+that's touching memory, at wall-clock cadence.
 
 ## Why it doesn't reuse the original literal addresses
 
-See [`../damo_replay.md`](../damo_replay.md): `damo replay` uses recorded
-addresses only as dictionary keys, never actually mapping them — an
-independent DAMON observer sees 0% spatial overlap with the original trace.
-`andrey_hammer` avoids that failure mode differently: it `mmap`s its **own**
-real, page-backed anonymous region, sized from the compressed geometry
-(`meta.matrix_geometry` / `physical_bounds` span), and reproduces the
-model's per-bin access profile as literal writes to literal pages inside
-*that* region. What DAMON observes is real, externally-verifiable traffic —
-just not at the original process's literal VA. The original addresses are
-used only for their *span* (to size our region) and implicitly through
-`matrix_geometry.cols` (to lay out spatial bins proportionally) — never as
-a `MAP_FIXED` target.
+`damo`'s own `replay` subcommand uses recorded addresses only as dictionary
+keys internally and never actually maps them — an independent DAMON observer
+watching a `damo replay` process sees 0% spatial overlap with the original
+trace. `andrey_hammer` avoids that failure mode differently: it `mmap`s its
+**own** real, page-backed anonymous region, sized from the compressed
+geometry (`meta.matrix_geometry` / `physical_bounds` span), and reproduces
+the model's per-bin access profile as literal writes to literal pages
+inside *that* region. What DAMON observes is real, externally-verifiable
+traffic — just not at the original process's literal VA. The original
+addresses are used only for their *span* (to size our region) and
+implicitly through `matrix_geometry.cols` (to lay out spatial bins
+proportionally) — never as a `MAP_FIXED` target.
 
 ## Build
 
@@ -76,8 +75,8 @@ Produces `build/andrey_hammer`. No dependencies beyond libc + libm.
 with `trend_slope`, `trend_intercept`, `std_dev`, `skewness`, `f_dom`,
 `a_dom`, `phi_start` (required), plus optional `autocorrelation_lag1`
 (default 0.8), `outlier_rate`/`outlier_mean`/`outlier_std`/`outlier_skewness`
-(default 0). Same schema `generate.py`/`simulate.py.txt` already consume —
-this is the exact file the (external, confidential) fitting step produces.
+(default 0). Same schema `generate.py (1).txt` already consumes — this is
+the exact file the (external, confidential) fitting step produces.
 
 ## Usage
 

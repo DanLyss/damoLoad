@@ -127,6 +127,54 @@ content-coupling are gone.
   timing is now genuinely trustworthy, not just "close enough that it
   happened not to corrupt this one metric."
 
+## Why ~0.3 time-profile r against `sim_raw3.txt` is expected, not a bug
+
+Not just "checked 5 seeds and it matched" — there's a direct mathematical
+reason this passport can't give much more than that, independent of
+pacing, DAMON, or any implementation issue.
+
+`M_raw` (and everything downstream of it) is built as:
+
+```
+X_raw(t) = trend(t) + harmonic(t) + AR(1)-noise(t)
+```
+
+`trend` and `harmonic` are **deterministic** — same formula, same result,
+in *any* run of this passport, C or Python, any seed. `AR(1)-noise` is
+**genuinely random** and independent between any two separate runs.
+
+For two independent realizations `X_A = det(t) + noise_A(t)` and
+`X_B = det(t) + noise_B(t)` of the same process (`noise_A` and `noise_B`
+uncorrelated), the correlation between them is exactly:
+
+```
+r = Var(det) / (Var(det) + Var(noise))
+```
+
+(covariance of the noise terms is zero by independence, so only the
+shared deterministic part contributes to `Cov(X_A, X_B)`).
+
+Plugging in `code3.json`'s actual `M_raw` parameters:
+
+- Harmonic variance: `a_dom²/2 = 21.81²/2 ≈ 237.8`
+- AR(1) noise variance (by construction of the cascade): `≈ 1700.7`
+- Trend variance over 254 steps (`trend_slope=-0.1873`/step, linear):
+  `(254×0.1873)²/12 ≈ 188.6`
+- **Deterministic share: `(188.6 + 237.8) / (188.6 + 237.8 + 1700.7) ≈ 0.21`**
+
+That ≈0.21 theoretical floor lines up with the empirically observed
+0.20–0.44 range (5-seed check above) — the empirical numbers run a bit
+higher because `compare_io.py` averages ~8–9 frames per grid row (30 rows
+over 254 frames), and averaging suppresses independent per-frame noise
+more than it suppresses the shared, slowly-varying deterministic
+component.
+
+**So: getting time-profile r much above ~0.3–0.4 against an independent
+realization of this passport would require the model to have much less
+random noise than it actually specifies** (`std_dev`/AR(1) terms in
+`code3.json` dominate the fluctuation by design, ~88% of its variance) —
+it's not something a faster or more precise `andrey_hammer` could achieve.
+
 ## Status
 
 **Fixed and verified**, committed to `andrey_hammer/src/andrey_hammer.c`.

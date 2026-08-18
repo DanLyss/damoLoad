@@ -1,5 +1,5 @@
-memtest/build/
-memtest/results/
+andrey_hammer/build/
+andrey_hammer/results/
 /tmp/
 *.data
 *.swp

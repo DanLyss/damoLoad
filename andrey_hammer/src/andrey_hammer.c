@@ -30,12 +30,10 @@
  * Design notes:
  *  - This process does NOT try to reuse the literal virtual addresses that
  *    were recorded in the original trace. Those addresses belong to a
- *    process that, by replay time, usually no longer exists (see
- *    ../damo_replay.md for what goes wrong when a replay tool pretends
- *    otherwise: damo's own `replay` subcommand never maps the recorded
- *    addresses at all — it just uses them as dictionary keys into random
- *    heap objects, so an independent DAMON observer sees 0% spatial overlap
- *    with the original).
+ *    process that, by replay time, usually no longer exists -- and damo's
+ *    own `replay` subcommand never maps the recorded addresses at all, it
+ *    just uses them as dictionary keys into random heap objects, so an
+ *    independent DAMON observer sees 0% spatial overlap with the original.
  *  - Instead, we mmap our OWN real, page-backed region sized from the
  *    compressed geometry (meta.matrix_geometry / physical_bounds), and
  *    reproduce the model's per-bin access-rate profile as literal byte
@@ -44,9 +42,9 @@
  *    externally-verifiable memory traffic — not a replay artifact.
  *  - The model itself (Super-Gaussian 3-mode spatial mixture, cascaded
  *    AR(1) temporal fluctuation with split-normal innovations + harmonic +
- *    outliers) is a direct C port of generate.py (Module 3) and
- *    reconstruct_heatmap.py (Module 4). See those files for the reference
- *    Python implementation and derivation notes.
+ *    outliers) is a direct C port of generate.py (1).txt, the repo root's
+ *    Python reference implementation. See that file for the derivation
+ *    notes.
  */
 
 /* ════════════════════════════════════════════════════════════════════════

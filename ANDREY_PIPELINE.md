@@ -61,10 +61,6 @@ generate.py (1).txt   — Module 3+4+5 combined: synthesizes the 10-channel
         ▼
 sim_raw3.txt-style io-format TEXT FILE   (a *prediction*, never executed)
 ```
-(equivalently, the same three steps run separately: `simulate.py.txt`
-(despite the name — Module 3 only, → trajectory CSV) → `reconstruct_heatmap.py.txt`
-(→ raw heatmap CSV) → `format_raw.py.txt` (→ io-format text); see "Filename
-trap" below before trusting either file's name over its docstring)
 
 ### This repo's pipeline, in detail
 
@@ -108,29 +104,12 @@ io-vs-io compare (`compare_io.py`) against `sim_raw3.txt`.
 | `code3.json` | Real passport (10-channel statistical model) — see format below | Given, real |
 | `meta3.json` | Real geometry matching `code3.json` — confirmed: its address span (696320 B = 680 KiB) matches `sim_raw3.txt` exactly, so this is the geometry that produced it | Given, real |
 | `sim_raw3.txt` | Real example output of the Python model on `code3.json`+`meta3.json` (io-format text, 254 snapshots) | Given, real — use as the shape reference |
-| `damo_replay.md` | Investigation notes: why `damo replay` (damo's own built-in replay subcommand) does NOT reproduce a real address-space pattern — motivates `andrey_hammer`'s design | Given, real |
 | `compare.py`, `scripts/build_kdamonds.py`, `patches/` | Pre-existing DAMON-comparison tooling this pipeline reuses (gt.log-vs-DAMON heatmap renderer, kdamonds JSON builder, required damo patches). An older, unrelated `memtest`/`hammer`/`run_memtest.sh` project used to live in this repo alongside these — removed from this branch since it's not part of the passport pipeline; only these two files were actual dependencies | Given, real, unchanged |
 | **`andrey_hammer/`** | **New.** C port of the passport model that drives LIVE memory accesses in real time (not a pre-rendered file). See `andrey_hammer/README.md` for full design rationale | **Built, compiled, checked against `sim_raw3.txt` on real `code3.json`+`meta3.json`: spatial-profile r≥0.95, magnitude within ~6% once width-weighted (see "Known issues"). Pacing drift fixed (mean overshoot 19.6%→0.1%, see "Known issues")** |
 | **`run_andrey.sh`** | **New.** Automated build → run → `damo record` → compare orchestration | **Run end-to-end for real** (root, live DAMON) — see "Live DAMON test results" below |
 | **`compare_io.py`** | **New.** Direct io-format-vs-io-format shape comparison (Pearson r, cosine similarity, normalized RMSE, separate time/space-profile correlations, ASCII heatmap) | **Built, tested** — self-comparison sanity checks, and used for the C-vs-Python math check below |
 | **`andrey_hammer/gt_to_io.py`** | **New.** Converts `gt.log`+`gt.log.frames` into io-format text directly, no DAMON involved — isolates replay fidelity from DAMON's own measurement noise | **Built, tested** — see "Known issues" below (r=0.97 vs `sim_raw3.txt`) |
 | **`andrey_hammer/PACING_DRIFT_ISSUE.md`** | **New.** Standalone writeup of the pacing-drift investigation and fix — code location, profiling breakdown, before/after numbers | **Fixed and verified** — full detail there, summary in "Known issues" below |
-
-## ⚠️ Filename trap in the Python reference scripts
-
-The two files `generate.py (1).txt` and `simulate.py.txt` are **named the
-opposite of what they contain** — confirmed by actually running both, not
-just reading docstrings casually:
-
-| Filename on GitHub | What's actually inside |
-|---|---|
-| **`generate.py (1).txt`** | The **single-pass combined simulator** (Module 3+4+5 in one loop) — docstring says "Single-Pass Streaming Simulator... Unifies trajectory waveform synthesis (Module 3), Super-Gaussian spatial reconstruction (Module 4), and DAMON region formatting (Module 5-Raw)". CLI: `--passport --meta --output-raw-log --steps ...`. **This is the file to run for an end-to-end Python reference trace**, and the one `andrey_hammer.c`'s math was ported from. |
-| **`simulate.py.txt`** | **Module 3 only** — docstring says "Symmetrical 10-Channel Parametric Waveform Simulator". CLI: `--passport --meta --output-traj --steps ...`. Writes a trajectory CSV, not an io-format log — needs `reconstruct_heatmap.py.txt` + `format_raw.py.txt` chained after it to get to text. |
-
-`reconstruct_heatmap.py.txt` (Module 4) and `format_raw.py.txt` (Module
-5-Raw) are named correctly — only these two are swapped. If re-fetching
-these files from wherever the confidential pipeline lives, verify the
-docstring before trusting the filename.
 
 ## What's missing
 
@@ -474,11 +453,10 @@ themselves, vs the human-readable comparison *reports* about them:
 ## Design decisions worth knowing before touching the code
 
 - **Addresses are never reused literally.** `andrey_hammer` mmaps its own
-  real region sized from the compressed geometry's *span* only. This was a
-  deliberate choice (see `damo_replay.md` for the specific failure mode of
-  `damo`'s own replay tool, which uses recorded addresses only as dictionary
-  keys and never actually maps them — 0% spatial overlap with the original
-  when independently observed).
+  real region sized from the compressed geometry's *span* only. Deliberate:
+  `damo`'s own `replay` subcommand uses recorded addresses only as
+  dictionary keys and never actually maps them — 0% spatial overlap with
+  the original when independently observed.
 - **The profile is computed in C, per frame, in real time** — not read from
   a pre-rendered Python-generated schedule file. This was also deliberate:
   the point is "how to hit memory right now," not "here's a script of what
