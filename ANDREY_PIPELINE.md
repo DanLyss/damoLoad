@@ -114,6 +114,7 @@ io-vs-io compare (`compare_io.py`) against `sim_raw3.txt`.
 | **`run_andrey.sh`** | **New.** Automated build → run → `damo record` → compare orchestration | **Run end-to-end for real** (root, live DAMON) — see "Live DAMON test results" below |
 | **`compare_io.py`** | **New.** Direct io-format-vs-io-format shape comparison (Pearson r, cosine similarity, normalized RMSE, separate time/space-profile correlations, ASCII heatmap) | **Built, tested** — self-comparison sanity checks, and used for the C-vs-Python math check below |
 | **`andrey_hammer/gt_to_io.py`** | **New.** Converts `gt.log`+`gt.log.frames` into io-format text directly, no DAMON involved — isolates replay fidelity from DAMON's own measurement noise | **Built, tested** — see "Known issues" below (r=0.97 vs `sim_raw3.txt`) |
+| **`andrey_hammer/PACING_DRIFT_ISSUE.md`** | **New.** Standalone writeup of the pacing-drift investigation and fix — code location, profiling breakdown, before/after numbers | **Fixed and verified** — full detail there, summary in "Known issues" below |
 
 ## ⚠️ Filename trap in the Python reference scripts
 
@@ -414,7 +415,8 @@ python3 compare_io.py sim_raw3.txt sim_raw3.txt --no-heatmap
 ```
 
 See "Known issues" above for what's already validated math-wise (spatial
-shape and magnitude check out; time-axis pacing doesn't yet).
+shape, magnitude, and time-axis pacing all check out now — see the
+"FIXED" entries there).
 
 ### Level 1 — full live DAMON round-trip (needs root)
 

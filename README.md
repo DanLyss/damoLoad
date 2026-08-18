@@ -33,8 +33,10 @@ damoLoad/ (branch: andrey_math)
 │       │                           rendered file) — see damo_replay.md for why
 │       ├── Makefile
 │       ├── README.md              — design rationale for this tool specifically
-│       └── gt_to_io.py             — converts gt.log → io-format text directly,
-│                                     bypassing DAMON's own sampling entirely
+│       ├── gt_to_io.py             — converts gt.log → io-format text directly,
+│       │                             bypassing DAMON's own sampling entirely
+│       └── PACING_DRIFT_ISSUE.md   — pacing-drift bug: investigation, root
+│                                     cause, fix (now FIXED)
 │
 ├── 🔍 Comparison & orchestration
 │   ├── run_andrey.sh            — one command: build → live run → damo record

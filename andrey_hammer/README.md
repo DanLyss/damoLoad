@@ -1,5 +1,9 @@
 # andrey_hammer — real-time JIT load simulator from a compressed passport
 
+> See [`../ANDREY_PIPELINE.md`](../ANDREY_PIPELINE.md) for the full pipeline,
+> status, and test commands, and [`PACING_DRIFT_ISSUE.md`](PACING_DRIFT_ISSUE.md)
+> for the (now fixed) real-time pacing investigation.
+
 A single-file C program that consumes Andrey's compressed statistical model
 of a DAMON trace (`code3.json` passport + `meta.json` geometry) and turns it
 into **live memory accesses, right now** — no pre-generated schedule file,
@@ -111,7 +115,16 @@ python3 ../compare.py /tmp/andrey.data /tmp/gt.log
 
 `gt.log` is written in the exact format `../compare.py` already expects
 (`# region 0 base=0x.. pages=..` header + `ts_ns region page` rows), so the
-existing comparison tooling works against it unmodified.
+existing comparison tooling works against it unmodified. Alongside it,
+`andrey_hammer` also writes `<gt.log>.frames` (real, not nominal, per-frame
+start/end timestamps) — `gt_to_io.py` in this directory converts that pair
+straight into io-format text, bypassing DAMON entirely:
 
-For the fully automated version (build → run → `damo record` → compare in
-one command), see `../run_andrey.sh`.
+```bash
+python3 gt_to_io.py --gt /tmp/gt.log --frames /tmp/gt.log.frames \
+    --meta meta.json --output /tmp/gt_as_io.txt
+python3 ../compare_io.py ../sim_raw3.txt /tmp/gt_as_io.txt
+```
+
+For the fully automated version (build → run → `damo record` → all
+comparisons in one command), see `../run_andrey.sh`.
