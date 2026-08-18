@@ -5,63 +5,50 @@ without re-deriving context from git history or chat logs. It covers: what
 the pipeline is, what's built, what's validated, what's still missing, exact
 file formats, and exact commands to build/run/test everything.
 
-## The pipeline
+## The pipeline — overview
+
+**Two different things read the same `code3.json`+`meta3.json`.** Andrey's
+own pipeline (Python, offline, never touches real memory) and this repo's
+pipeline (C, live, real memory, real DAMON) are separate, parallel paths —
+not stages of one linear flow. Both end at an io-format text file, which is
+why `compare_io.py` can point at either one:
 
 ```
                     ┌─────────────────────────────────────┐
                     │  CONFIDENTIAL — not in this repo,    │
-                    │  not our concern to build             │
-                    │                                       │
-  real damon.data   │  fitting script (Python)              │
-  (io format)  ─────┼─►  reduces a full trace down to a     │
-                    │    small statistical "passport"       │
+  real damon.data   │  not our concern to build             │
+  (io format)  ─────┼─►  fitting script (Python) reduces a  │
+                    │    full trace to a small statistical   │
+                    │    "passport"                          │
                     └───────────────────┬───────────────────┘
                                          ▼
                           code3.json (passport) + meta3.json (geometry)
                                          │
-                                         ▼            ← THIS REPO starts here
-                          ┌──────────────────────────┐
-                          │  andrey_hammer (C)        │
-                          │  computes the profile      │
-                          │  itself, per frame, in     │
-                          │  real time, and touches     │
-                          │  real memory pages RIGHT     │
-                          │  NOW — see andrey_hammer/  │
-                          └──────────────┬─────────────┘
-                                         │  (an independent `damo record`
-                                         │   watches this process live)
+                    ┌────────────────────┴────────────────────┐
+                    ▼                                          ▼
+     ANDREY'S PIPELINE (Python, offline)      THIS REPO'S PIPELINE (C, live, real DAMON)
+     ───────────────────────────────────      ──────────────────────────────────────────
+     generate.py (1).txt computes the          andrey_hammer computes the same profile,
+     profile offline and formats it            per frame, in real time, and immediately
+     straight to text — nothing is             touches real memory pages with it — see
+     executed, it's a prediction               "This repo's pipeline" below for detail
+                    │                                          │
+                    ▼                                          ▼
+         io-format TEXT (sim_raw3.txt)              io-format TEXT (two ways to get one,
+                                                      see below — with or without DAMON)
+                    │                                          │
+                    └────────────────────┬────────────────────┘
                                          ▼
-                              fresh damon.data (binary/record)
-                                         │
-                              `damo report access --raw`
-                                         ▼
-                              fresh io-format TEXT file ◄── materialized as
-                                         │                  a real, saved
-                    original io-format ──┤                  artifact, not
-                    trace (sim_raw3.txt- │                  hidden inside
-                    style, input to the ▼                  compare_io.py
-                    confidential fitting)
-                          ┌──────────────────────────┐
-                          │  compare_io.py             │
-                          │  shape comparison of the    │
-                          │  two io-format text files    │
-                          └──────────────┬─────────────┘
+                                  compare_io.py
+                            (shape comparison of any
+                              two io-format files)
                                          ▼
                                    final report
 ```
 
-`run_andrey.sh` wires everything from `code3.json`+`meta3.json` down to
-`final report` together automatically (build → run `andrey_hammer` → `damo
-record` in parallel → GT-vs-DAMON compare → materialize io-format →
-io-vs-io compare).
+The rest of this section breaks each branch down.
 
-## Andrey's pipeline vs this repo's pipeline
-
-Two genuinely different things read the same `code3.json`+`meta3.json` and
-it's worth being explicit about which is which, since neither one touches
-real memory the same way (or at all):
-
-**Andrey's pipeline — pure Python, offline, no real memory, no DAMON:**
+### Andrey's pipeline, in detail
 
 ```
 code3.json + meta3.json
@@ -79,7 +66,7 @@ sim_raw3.txt-style io-format TEXT FILE   (a *prediction*, never executed)
 (→ raw heatmap CSV) → `format_raw.py.txt` (→ io-format text); see "Filename
 trap" below before trusting either file's name over its docstring)
 
-**This repo's pipeline — C, real time, real memory, real DAMON:**
+### This repo's pipeline, in detail
 
 ```
 code3.json + meta3.json
@@ -100,15 +87,19 @@ gt.log + gt.log.frames (exactly what andrey_hammer really did)
                                                 sampling noise baked in)
 ```
 
-Both pipelines can be pointed at the same `code3.json`+`meta3.json` and
-compared against each other (or against `sim_raw3.txt`) via `compare_io.py`
-— that's exactly the "Known issues" investigation below. The three
-comparisons answer three different questions: does the *model math* match
-between languages (compare `sim_raw3.txt`-style output to `gt_to_io.py`'s
-output — no DAMON in either), does the *replay* match the model (same
-comparison), and does *DAMON's observation* of the replay match the
-original (compare `sim_raw3.txt` to the `damo report access --raw` output —
-this is the one real DAMON noise shows up in).
+`run_andrey.sh` automates the right-hand (DAMON) route end to end: build →
+run `andrey_hammer` → `damo record` in parallel → GT-vs-DAMON compare
+(`compare.py`) → materialize io-format (`damo report access --raw`) →
+io-vs-io compare (`compare_io.py`) against `sim_raw3.txt`.
+
+**Three different comparisons, three different questions** — all via
+`compare_io.py`, just pointed at different pairs of io-format files:
+
+| Compare | Answers |
+|---|---|
+| `sim_raw3.txt` vs `gt_to_io.py` output | Does the C math port match the Python reference? (no DAMON either side) |
+| `sim_raw3.txt` vs `damo report access --raw` output | Does DAMON's *observation* of the live replay match the original? (DAMON's 5ms/200Hz sampling noise included) |
+| `gt_to_io.py` output vs `damo report access --raw` output | How much noise does DAMON's own sampling add, isolated from everything else? |
 
 ## What's in this repo, file by file
 
