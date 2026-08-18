@@ -26,7 +26,7 @@ Both inputs are in DAMON's own "raw" access-report text format:
     <blank line>
     ... next snapshot ...
 
-This is produced by `damo report access --input <damon.data> --raw`, and is
+This is produced by `damo report access --input <damon.data> --raw_form`, and is
 also exactly what this repo's model scripts (format_raw.py, simulate.py)
 already emit directly — see sim_raw3.txt for a real example. A path ending
 in `.data` is treated as a raw DAMON recording and piped through `damo

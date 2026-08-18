@@ -81,7 +81,7 @@ gt.log + gt.log.frames (exactly what andrey_hammer really did)
         ├──────────────────────► gt_to_io.py ──► io-format text (DAMON-free)
         │
         └── watched live by `damo record` ──► damon.data ──► `damo report
-                                                access --raw` ──► io-format
+                                                access --raw_form` ──► io-format
                                                 text (DAMON's observation,
                                                 with its own 5ms/200Hz
                                                 sampling noise baked in)
