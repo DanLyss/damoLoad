@@ -354,6 +354,30 @@ sudo -E bash run_andrey.sh code3.json meta3.json /tmp/gt.log /root/andrey_out.da
 through `damo report access --raw_form` if called standalone; anything else is
 read as io-format text directly.)
 
+### Where `run_andrey.sh` writes its output files
+
+Two different kinds of file, easy to conflate — the io-format *data* files
+themselves, vs the human-readable comparison *reports* about them:
+
+**io-format data files** (default paths, all overridable via positional args):
+
+| File | Default path | How it's produced |
+|---|---|---|
+| DAMON's observation, as io-format text | `/root/andrey_damon.io.txt` | `damo report access --raw_form` on `$DAMON_OUT` |
+| This run's own ground truth, as io-format text | `/tmp/andrey_gt.io.txt` | `gt_to_io.py` on `$GT_OUT` + `$GT_OUT.frames` |
+| (raw ground truth log) | `/tmp/andrey_gt.log` | `andrey_hammer` itself |
+| (frame boundaries) | `/tmp/andrey_gt.log.frames` | `andrey_hammer` itself |
+| (raw DAMON recording, binary) | `/root/andrey_damon.data` | `damo record` |
+
+**Comparison reports** (always under `andrey_hammer/results/<passport>_<HHMMSS>...`):
+
+| File | Contents |
+|---|---|
+| `<name>_<time>.txt` | GT vs DAMON (`compare.py`) |
+| `<name>_<time>_io.txt` | original vs DAMON's io-format |
+| `<name>_<time>_io_gt.txt` | original vs this run's own io-format (no DAMON) |
+| `<name>_<time>_io_damon_vs_gt.txt` | DAMON's io-format vs this run's own io-format |
+
 ## Design decisions worth knowing before touching the code
 
 - **Addresses are never reused literally.** `andrey_hammer` mmaps its own
