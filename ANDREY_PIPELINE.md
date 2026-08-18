@@ -57,9 +57,9 @@ run andrey_hammer → `damo record` in parallel → compare).
 | `sim_raw3.txt` | Real example output of the Python model on `code3.json`+`meta3.json` (io-format text, 254 snapshots) | Given, real — use as the shape reference |
 | `damo_replay.md` | Investigation notes: why `damo replay` (damo's own built-in replay subcommand) does NOT reproduce a real address-space pattern — motivates `andrey_hammer`'s design | Given, real |
 | `compare.py`, `run_memtest.sh`, `memtest/`, `hammer/` | Pre-existing ground-truth-vs-DAMON tooling, unrelated to the passport model except that `andrey_hammer` reuses `compare.py`'s gt.log format and `memtest/scripts/build_kdamonds.py` | Given, real, unchanged |
-| **`andrey_hammer/`** | **New.** C port of the passport model that drives LIVE memory accesses in real time (not a pre-rendered file). See `andrey_hammer/README.md` for full design rationale | **Built, compiled. See "Known issues" below — NOT yet numerically validated** |
+| **`andrey_hammer/`** | **New.** C port of the passport model that drives LIVE memory accesses in real time (not a pre-rendered file). See `andrey_hammer/README.md` for full design rationale | **Built, compiled, checked against `sim_raw3.txt` on real `code3.json`+`meta3.json`: spatial-profile r=0.89, magnitude within ~4% once width-weighted (see "Known issues"). Time-axis fidelity still degraded by a real pacing bug** |
 | **`run_andrey.sh`** | **New.** Automated build → run → `damo record` → compare orchestration, mirrors `run_memtest.sh` | **Built. NOT yet run end-to-end** (needs interactive `sudo` — see Testing) |
-| **`compare_io.py`** | **New.** Direct io-format-vs-io-format shape comparison (Pearson r, cosine similarity, normalized RMSE, separate time/space-profile correlations, ASCII heatmap) | **Built, tested** against `sim_raw3.txt` and used for the C-vs-Python check below |
+| **`compare_io.py`** | **New.** Direct io-format-vs-io-format shape comparison (Pearson r, cosine similarity, normalized RMSE, separate time/space-profile correlations, ASCII heatmap) | **Built, tested** — self-comparison sanity checks, and used (via ad-hoc gt.log conversion) for the C-vs-Python math check above |
 
 ## ⚠️ Filename trap in the Python reference scripts
 
@@ -84,51 +84,48 @@ confidential and lives outside this repo. Not our job to build. Everything
 else needed to test this branch is now present (both `code3.json` and
 `meta3.json` are real).
 
-## Known issues / open investigation
+## Known issues
 
-**C-vs-Python total-accesses mismatch, ~1.5x, appears systematic (not RNG
-noise).** Ran `andrey_hammer` and the Python reference (`generate.py (1).txt`)
-on the *same* `code3.json` + geometry, 100 steps, 5 different seeds each:
+**Apparent C-vs-Python total-accesses mismatch — investigated, turned out
+NOT to be a math bug.** First pass looked alarming: `andrey_hammer` vs the
+Python reference on the same `code3.json`+`meta3.json`, 254 steps, naive
+`sum(nr_accesses)` over all regions gave 55737 (C) vs 27625 (Python,
+`sim_raw3.txt`) — a consistent ~2x gap across multiple seeds. Root cause:
+`format_raw.py`'s region-merging step (and `generate.py (1).txt`'s inline
+equivalent) collapses adjacent same-valued spatial bins into one wider
+region and writes **one** `nr_accesses` value for the whole merged region —
+correct DAMON semantics (`nr_accesses` is a rate for the region, not summed
+across its width), but it means a naive `sum(nr_accesses)` over a merged
+io-format file systematically undercounts relative to `andrey_hammer`'s
+`gt.log`, which logs literal unmerged per-page touches. Width-weighting
+fixes it:
 
 ```
-seed=1  python_total=14532   C_total=22783
-seed=2  python_total=15649   C_total=22294
-seed=3  python_total=14323   C_total=21749
-seed=4  python_total=13912   C_total=22064
-seed=5  python_total=15365   C_total=21908
+naive sum(nr_accesses) over regions:                 27625
+width-weighted sum(nr_accesses × pages_in_region):    53811   ← vs C's 55737, ~4% gap
 ```
 
-Python: 13912–15649 (tight spread, ~12%). C: 21749–22783 (tight spread,
-~5%). The *within-language* spread is small and the *between-language* gap
-(~1.5x, consistently) is large — that pattern means a real formula
-discrepancy somewhere in `andrey_hammer.c`'s `channel_precompute()` /
-`channel_step()` vs the reference's per-channel precompute block (`generate.py
-(1).txt` lines ~225–266 for constants, ~290–329 for the per-step update),
-not bad luck. **Not yet root-caused — this was mid-investigation when
-interrupted.** Whoever picks this up next: re-run the two commands below and
-diff the precomputed constants (`p_k, p_b, p_sigma_x, phi_v, phi_z, alpha,
-mu_eps, std_z, scale_factor, theo_fluct_std`) for one channel directly,
-rather than comparing only the final output — that'll localize it faster
-than comparing totals.
+4% is within normal seed-to-seed variance (~10-12% spread observed across 5
+seeds). **Conclusion: the math port's magnitude looks correct.** Spatial
+shape also checks out: `compare_io.py`-style spatial-profile Pearson r =
+0.89 between `andrey_hammer`'s live touches and `sim_raw3.txt`, on the real
+`code3.json`+`meta3.json`. Lesson for future comparisons: don't compare raw
+`sum(nr_accesses)` between a merged (`damo`/Python-style) io-format file and
+an unmerged ground-truth log without width-weighting one side — `compare_io.py`
+itself isn't affected by this for its real use case (both sides of a Level-2
+comparison go through `damo report access --raw`, so both are merged the
+same way and stay comparable).
 
-```bash
-# Python reference
-python3 "generate.py (1).txt" --passport code3.json --meta meta3.json \
-    --output-raw-log /tmp/python_ref.io.txt --steps 100 --seed 1
-
-# C
-cd andrey_hammer && make
-./build/andrey_hammer ../code3.json ../meta3.json /tmp/gt.log --steps 100 --seed 1 <<< ''
-```
-
-Separately, the C driver's real-time pacing loop shows **timing drift under
-WSL2** (~25–30% frame overrun observed) — `andrey_hammer.c`'s per-frame
-`sleep_ns(remaining_ns)` padding doesn't carry debt across frames the way
-`memtest/src/track.c`'s debt-based loop does. Worth porting that pattern in
-if wall-clock fidelity matters for the live DAMON test (Level 1 below isn't
-affected in principle, since DAMON aggregates over its own window
-regardless — but a `compare_io.py` time-profile check against nominal
-frame boundaries will look worse than it should until this is fixed).
+**Real, still-open issue: timing drift in the live pacing loop.** Under
+WSL2, `andrey_hammer.c`'s per-frame `sleep_ns(remaining_ns)` padding runs
+~20–30% over its nominal `frame_dt_ms` (e.g. 254 steps × 100.46ms nominal
+measured out to something closer to 305 frames' worth of wall-clock time
+when re-bucketed). It doesn't carry debt across frames the way
+`memtest/src/track.c`'s debt-based loop does, so overruns compound. This
+degrades any time-profile comparison against nominal frame boundaries
+(observed time-profile r dropped to ~0.43 vs a healthy spatial r of 0.89 on
+otherwise-matching data) and is worth fixing by porting `track.c`'s
+debt-based pacing pattern in before trusting time-axis comparisons.
 
 ## Exact file formats `andrey_hammer` expects
 
