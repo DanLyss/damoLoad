@@ -31,22 +31,29 @@ file formats, and exact commands to build/run/test everything.
                                          │  (an independent `damo record`
                                          │   watches this process live)
                                          ▼
-                              fresh damon.data (io format)
+                              fresh damon.data (binary/record)
                                          │
-                    original io-format ──┤
-                    trace (input to the  │
-                    confidential fitting)▼
+                              `damo report access --raw`
+                                         ▼
+                              fresh io-format TEXT file ◄── materialized as
+                                         │                  a real, saved
+                    original io-format ──┤                  artifact, not
+                    trace (sim_raw3.txt- │                  hidden inside
+                    style, input to the ▼                  compare_io.py
+                    confidential fitting)
                           ┌──────────────────────────┐
                           │  compare_io.py             │
                           │  shape comparison of the    │
-                          │  two io-format traces        │
+                          │  two io-format text files    │
                           └──────────────┬─────────────┘
                                          ▼
                                    final report
 ```
 
-`run_andrey.sh` wires the middle three boxes together automatically (build →
-run andrey_hammer → `damo record` in parallel → compare).
+`run_andrey.sh` wires everything from `code3.json`+`meta3.json` down to
+`final report` together automatically (build → run `andrey_hammer` → `damo
+record` in parallel → GT-vs-DAMON compare → materialize io-format →
+io-vs-io compare).
 
 ## What's in this repo, file by file
 
@@ -199,10 +206,8 @@ python3 compare_io.py sim_raw3.txt sim_raw3.txt --no-heatmap
 # expect: every metric = 1.00 / 0.000 (identical file vs itself)
 ```
 
-**Before trusting numeric output past this level, resolve the "Known
-issues" C-vs-Python mismatch above** — until then, `andrey_hammer`'s access
-*counts* run ~1.5x hot relative to the reference model, even though it
-mechanically runs fine.
+See "Known issues" above for what's already validated math-wise (spatial
+shape and magnitude check out; time-axis pacing doesn't yet).
 
 ### Level 1 — full live DAMON round-trip (needs root, run this yourself)
 
@@ -211,20 +216,26 @@ cd ~ && git clone --branch andrey_math --single-branch https://github.com/DanLys
 cd damoLoad
 export DAMON_DIR=/usr/local/bin
 sudo -E bash run_andrey.sh
-# defaults to code3.json + meta3.json now. Builds andrey_hammer, runs it,
-# records with a live `damo record` in parallel, compares against
-# andrey_hammer's own gt.log via compare.py.
 ```
 
-### Level 2 — fidelity check against the real original trace
+Defaults to `code3.json` + `meta3.json` + `sim_raw3.txt` as the original.
+Does everything in one go: builds `andrey_hammer`, runs it, records with a
+live `damo record` in parallel, compares against `andrey_hammer`'s own
+`gt.log` via `compare.py`, **then** converts the fresh recording to
+io-format text (`damo report access --raw`) and runs `compare_io.py`
+against the original — the actual final "two io-format files → report"
+step from the original pipeline spec. Both reports get saved under
+`andrey_hammer/results/`.
+
+To point at a different original trace or output paths:
 
 ```bash
-sudo -E bash run_andrey.sh code3.json meta3.json /tmp/gt.log /root/andrey_out.data
-python3 compare_io.py sim_raw3.txt /root/andrey_out.data --damo /usr/local/bin/damo
+sudo -E bash run_andrey.sh code3.json meta3.json /tmp/gt.log /root/andrey_out.data path/to/original.io.txt
 ```
 
-(`compare_io.py` auto-converts any input ending in `.data` through
-`damo report access --raw`; anything else is read as io-format text directly.)
+(`compare_io.py` itself also auto-converts any input ending in `.data`
+through `damo report access --raw` if called standalone; anything else is
+read as io-format text directly.)
 
 ## Design decisions worth knowing before touching the code
 
