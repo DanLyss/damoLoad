@@ -6,32 +6,50 @@ trace — see [`ANDREY_PIPELINE.md`](ANDREY_PIPELINE.md) for the full pipeline,
 status, exact file formats, and build/test commands.
 
 ```
-damoLoad/
-├── ANDREY_PIPELINE.md      — start here: pipeline diagram, status, formats, tests
-├── code3.json              — real 10-channel statistical "passport"
-├── meta3.json              — real geometry matching code3.json
-├── sim_raw3.txt            — real reference io-format trace (Python model output)
+damoLoad/ (branch: andrey_math)
 │
-├── generate.py (1).txt / reconstruct_heatmap.py.txt / format_raw.py.txt / simulate.py.txt
-│                          — Andrey's Python reference model: passport+meta
-│                            → synthetic io-format trace (see damo_replay.md
-│                            for why a naive replay of a recorded trace
-│                            doesn't work, motivating the C port below)
+├── 📄 Docs
+│   ├── README.md               — this file: quick start + map
+│   └── ANDREY_PIPELINE.md      — start here: pipeline diagram, status, exact
+│                                  file formats, known issues, test commands
 │
-├── andrey_hammer/          — real-time C port: computes the profile itself,
-│                             per frame, and drives LIVE memory accesses on
-│                             its own mmap'd region (not a pre-rendered file)
-├── run_andrey.sh           — automated runner: build → replay → damo record
-│                             → compare (GT-vs-DAMON, then io-format vs io-format)
-├── compare.py               — per-region GT vs DAMON ASCII heatmap renderer
-│                             (used by run_andrey.sh; damo report heatmap)
-├── compare_io.py            — direct io-format vs io-format shape comparison
-│                             (address-fraction-normalized, ASCII heatmap)
-├── scripts/build_kdamonds.py — builds a kdamonds JSON config for damo record
-│                             from a PID + region list (used by run_andrey.sh)
-├── patches/                 — required damo patches, see below
-└── damo_replay.md           — investigation notes on why damo's own `replay`
-                              subcommand doesn't reproduce a real address space
+├── 🔢 Real input data (from the fitting step, confidential/external)
+│   ├── code3.json               — 10-channel statistical "passport"
+│   ├── meta3.json                — geometry matching code3.json
+│   └── sim_raw3.txt               — reference io-format trace (Python model output)
+│
+├── 🐍 Andrey's pipeline (pure Python, offline, no real memory, no DAMON)
+│   ├── generate.py (1).txt        — ⚠️ actually the single-pass Module 3+4+5
+│   │                                 (misleading name — see ANDREY_PIPELINE.md)
+│   ├── simulate.py.txt             — ⚠️ actually Module 3 only (misleading name)
+│   ├── reconstruct_heatmap.py.txt   — Module 4
+│   └── format_raw.py.txt             — Module 5
+│
+├── ⚙️ This repo's pipeline (C, real time, real memory, real DAMON)
+│   └── andrey_hammer/
+│       ├── src/andrey_hammer.c   — the C driver: computes the profile itself,
+│       │                           per frame, and drives LIVE memory accesses
+│       │                           on its own mmap'd region (not a pre-
+│       │                           rendered file) — see damo_replay.md for why
+│       ├── Makefile
+│       ├── README.md              — design rationale for this tool specifically
+│       └── gt_to_io.py             — converts gt.log → io-format text directly,
+│                                     bypassing DAMON's own sampling entirely
+│
+├── 🔍 Comparison & orchestration
+│   ├── run_andrey.sh            — one command: build → live run → damo record
+│   │                               → all 3 io-format comparisons → reports
+│   ├── compare.py                — gt.log vs DAMON heatmap (reused dependency)
+│   └── compare_io.py              — direct io-format-vs-io-format shape comparison
+│
+├── 🔧 Supporting
+│   ├── scripts/build_kdamonds.py  — builds a kdamonds JSON config for damo
+│   │                                 record from a PID + region list
+│   └── patches/                    — required damo patches, see below
+│
+└── 📝 damo_replay.md            — investigation notes: why damo's own `replay`
+                                    subcommand doesn't reproduce a real address
+                                    space, and what this repo does differently
 ```
 
 ## Quick Start
