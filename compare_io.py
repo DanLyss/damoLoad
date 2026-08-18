@@ -44,6 +44,7 @@ absolute addresses line up.
 
 import argparse
 import math
+import os
 import re
 import subprocess
 import sys
@@ -292,6 +293,13 @@ def main():
     ap.add_argument('--convert-a', action='store_true', help='force A through `damo report access --raw_form`')
     ap.add_argument('--convert-b', action='store_true', help='force B through `damo report access --raw_form`')
     ap.add_argument('--no-heatmap', action='store_true', help='skip ASCII heatmap rendering')
+    ap.add_argument('--markdown', action='store_true',
+                     help='also print a "| label | shape r | space r | time r | ratio |" row, '
+                          'for collecting multiple runs into one comparison table')
+    ap.add_argument('--markdown-header', action='store_true',
+                     help='with --markdown, also print the table header + separator row first')
+    ap.add_argument('--label', default=None,
+                     help='row label for --markdown (default: "<A> vs <B>" using basenames)')
     args = ap.parse_args()
 
     print(f'Loading A: {args.file_a}')
@@ -368,6 +376,14 @@ def main():
         print(f'VERDICT: weak/no match — shape r={r_norm:.2f}. '
               f'Check time-profile r ({r_time:.2f}) vs space-profile r ({r_space:.2f}) '
               f'to see whether the mismatch is temporal, spatial, or both.')
+
+    if args.markdown:
+        label = args.label or f'{os.path.basename(args.file_a)} vs {os.path.basename(args.file_b)}'
+        print()
+        if args.markdown_header:
+            print('| Compare | Shape r | Space r | Time r | Magnitude ratio |')
+            print('|---|---|---|---|---|')
+        print(f'| {label} | {r_norm:.2f} | {r_space:.2f} | {r_time:.2f} | {ratio:.2f} |')
 
 
 if __name__ == '__main__':
