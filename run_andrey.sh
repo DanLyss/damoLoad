@@ -8,7 +8,12 @@
 #
 # Usage:
 #   export DAMON_DIR=/path/to/damo   # directory containing the damo executable
-#   sudo -E bash run_andrey.sh [passport.json] [meta.json] [gt.log] [damon.data] [extra andrey_hammer args...]
+#   sudo -E bash run_andrey.sh [passport.json] [meta.json] [gt.log] [damon.data] [original.io.txt] [extra andrey_hammer args...]
+#
+# original.io.txt (optional, default: sim_raw3.txt if present) is Andrey's
+# own io-format text -- the reference this run's live DAMON recording gets
+# compared against at the end via compare_io.py, once both sides are in the
+# same io-format text shape (see "materialize io-format" step below).
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
@@ -29,12 +34,15 @@ PASSPORT=${1:-"$SCRIPT_DIR/code3.json"}
 META=${2:-"$SCRIPT_DIR/meta3.json"}
 GT_OUT=${3:-/tmp/andrey_gt.log}
 DAMON_OUT=${4:-/root/andrey_damon.data}
-shift $(( $# < 4 ? $# : 4 )) 2>/dev/null
+ORIGINAL_IO=${5:-"$SCRIPT_DIR/sim_raw3.txt"}
+shift $(( $# < 5 ? $# : 5 )) 2>/dev/null
 EXTRA_ARGS=("$@")
 
 ANDREY_DIR="$SCRIPT_DIR/andrey_hammer"
 COMPARE_PY="$SCRIPT_DIR/compare.py"
+COMPARE_IO_PY="$SCRIPT_DIR/compare_io.py"
 ANDREY_LOG=/tmp/andrey_hammer_out.txt
+DAMON_IO_OUT="${DAMON_OUT%.data}.io.txt"
 
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"
@@ -146,3 +154,28 @@ RESOL=""
 python3 "$COMPARE_PY" "$DAMON_OUT" "$GT_OUT" $RESOL "$DAMON_MIN" "$DAMON_MAX" "$DAMO" | tee >(sed 's/\x1b\[[0-9;]*m//g' > "$LOG_FILE")
 echo ""
 echo "==> Log saved: $LOG_FILE"
+
+# ── 7. materialize io-format ─────────────────────────────────────────────────
+# Both sides of the pipeline should end at the same artifact shape (per the
+# original spec: "damon file = damon.data = io format"). This turns what
+# DAMON actually recorded into the same io-format text Andrey's Python model
+# produces, as a real, inspectable file -- not just an implicit conversion
+# hidden inside compare_io.py.
+echo ""
+echo "==> Materializing io-format from DAMON's recording..."
+"$DAMO" report access --input "$DAMON_OUT" --raw > "$DAMON_IO_OUT"
+echo "    $DAMON_IO_OUT"
+
+# ── 8. compare two io-format files ──────────────────────────────────────────
+if [ -f "$ORIGINAL_IO" ]; then
+    echo ""
+    echo "==> Comparing io-format vs io-format (original vs this run)..."
+    python3 "$COMPARE_IO_PY" "$ORIGINAL_IO" "$DAMON_IO_OUT" --damo "$DAMO" \
+        | tee >(sed 's/\x1b\[[0-9;]*m//g' > "${LOG_FILE%.txt}_io.txt")
+    echo ""
+    echo "==> Log saved: ${LOG_FILE%.txt}_io.txt"
+else
+    echo ""
+    echo "==> Skipping io-format vs io-format comparison: '$ORIGINAL_IO' not found."
+    echo "    Pass it explicitly: run_andrey.sh $PASSPORT $META $GT_OUT $DAMON_OUT path/to/original.io.txt"
+fi
