@@ -164,16 +164,28 @@ With both fixed, all three `compare_io.py` comparisons ran clean:
 | `sim_raw3.txt` vs DAMON's observation | 0.95 | 0.998 | 0.23 | **0.52** |
 | `sim_raw3.txt` vs `gt_to_io.py` (no DAMON) | 0.97 | 1.00 | 0.33 | **1.06** |
 | `gt_to_io.py` vs DAMON's observation | 0.96 | 0.999 | 0.27 | **0.49** |
+| `sim_raw3.txt` vs Andrey's own pipeline, different seed | 0.97 | 1.00 | **0.69** | 0.99 |
 
-Reading this: **spatial shape is essentially solved** (r≥0.95 everywhere,
-space-profile r≈1.0) — the model math and the replay both reproduce the
-right hot/cold pattern. **Magnitude is accurate when DAMON isn't involved**
-(1.06 vs the original) but **DAMON itself only sees about half the real
-activity** (0.52, 0.49) — consistent with DAMON's known 5ms-sample/200Hz-cap
-sampling limit (see root README's "Key DAMON Behaviors"), not a bug in this
-pipeline. **Time-profile r is low across all three** (0.23–0.33), including
-the DAMON-free comparison — confirming the timing-drift issue is in
-`andrey_hammer`'s own pacing loop, not something DAMON introduces.
+The last row is a baseline, not a result of this repo's code: it's
+`generate.py (1).txt` regenerating from the same `code3.json`+`meta3.json`
+with `--seed 0` instead of whatever seed produced `sim_raw3.txt`, compared
+against `sim_raw3.txt` itself. Since the model has genuine stochastic
+noise (the AR(1) cascade), no two runs — Python or C — will ever match
+time-for-time exactly; **0.69 is roughly the practical ceiling for
+time-profile r** given this passport, not 1.0. `andrey_hammer`'s 0.23–0.33
+is below that ceiling because of the pacing-drift bug below, not because
+C is inherently worse at reproducing the model.
+
+Reading the rest: **spatial shape is essentially solved** (r≥0.95
+everywhere, space-profile r≈1.0) — the model math and the replay both
+reproduce the right hot/cold pattern. **Magnitude is accurate when DAMON
+isn't involved** (1.06 vs the original, 0.99 for Python-vs-Python) but
+**DAMON itself only sees about half the real activity** (0.52, 0.49) —
+consistent with DAMON's known 5ms-sample/200Hz-cap sampling limit (see
+root README's "Key DAMON Behaviors"), not a bug in this pipeline.
+**Time-profile r is low across the DAMON-involving comparisons**
+(0.23–0.33) — below even the DAMON-free Python-vs-Python baseline (0.69),
+confirming the timing-drift issue is in `andrey_hammer`'s own pacing loop.
 
 ## Known issues
 
