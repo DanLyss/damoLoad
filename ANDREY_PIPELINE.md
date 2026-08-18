@@ -55,6 +55,61 @@ file formats, and exact commands to build/run/test everything.
 record` in parallel → GT-vs-DAMON compare → materialize io-format →
 io-vs-io compare).
 
+## Andrey's pipeline vs this repo's pipeline
+
+Two genuinely different things read the same `code3.json`+`meta3.json` and
+it's worth being explicit about which is which, since neither one touches
+real memory the same way (or at all):
+
+**Andrey's pipeline — pure Python, offline, no real memory, no DAMON:**
+
+```
+code3.json + meta3.json
+        │
+        ▼
+generate.py (1).txt   — Module 3+4+5 combined: synthesizes the 10-channel
+        │                trajectory, expands it into a spatial profile,
+        │                formats it into region/nr_accesses/age text —
+        │                all in one offline pass
+        ▼
+sim_raw3.txt-style io-format TEXT FILE   (a *prediction*, never executed)
+```
+(equivalently, the same three steps run separately: `simulate.py.txt`
+(despite the name — Module 3 only, → trajectory CSV) → `reconstruct_heatmap.py.txt`
+(→ raw heatmap CSV) → `format_raw.py.txt` (→ io-format text); see "Filename
+trap" below before trusting either file's name over its docstring)
+
+**This repo's pipeline — C, real time, real memory, real DAMON:**
+
+```
+code3.json + meta3.json
+        │
+        ▼
+andrey_hammer (C)      — same math, ported to C, computed fresh every frame,
+        │                immediately acted on: mmaps a real region and
+        │                writes real bytes to real pages RIGHT NOW
+        ▼
+gt.log + gt.log.frames (exactly what andrey_hammer really did)
+        │
+        ├──────────────────────► gt_to_io.py ──► io-format text (DAMON-free)
+        │
+        └── watched live by `damo record` ──► damon.data ──► `damo report
+                                                access --raw` ──► io-format
+                                                text (DAMON's observation,
+                                                with its own 5ms/200Hz
+                                                sampling noise baked in)
+```
+
+Both pipelines can be pointed at the same `code3.json`+`meta3.json` and
+compared against each other (or against `sim_raw3.txt`) via `compare_io.py`
+— that's exactly the "Known issues" investigation below. The three
+comparisons answer three different questions: does the *model math* match
+between languages (compare `sim_raw3.txt`-style output to `gt_to_io.py`'s
+output — no DAMON in either), does the *replay* match the model (same
+comparison), and does *DAMON's observation* of the replay match the
+original (compare `sim_raw3.txt` to the `damo report access --raw` output —
+this is the one real DAMON noise shows up in).
+
 ## What's in this repo, file by file
 
 | Path | What it is | Status |
