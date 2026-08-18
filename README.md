@@ -64,8 +64,13 @@ sudo -E bash run_andrey.sh
 
 That builds `andrey_hammer`, drives a live memory-access replay of
 `code3.json`+`meta3.json` in real time, records it with a live `damo
-record`, and produces two reports under `andrey_hammer/results/`: ground
-truth vs DAMON, and original io-format vs this run's io-format. Full
+record`, and saves four reports under `andrey_hammer/results/`:
+ground truth vs DAMON (`compare.py`), then three io-format-vs-io-format
+comparisons via `compare_io.py` — original vs DAMON's observation,
+original vs this run's own ground truth (no DAMON), and DAMON's
+observation vs this run's own ground truth (isolates DAMON's sampling
+noise from everything else; see ANDREY_PIPELINE.md's "Three different
+comparisons" table for what each one actually answers). Full
 details, known issues, and lower-level manual test commands are in
 [`ANDREY_PIPELINE.md`](ANDREY_PIPELINE.md).
 
