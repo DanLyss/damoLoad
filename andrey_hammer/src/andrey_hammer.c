@@ -583,8 +583,25 @@ int main(int argc, char **argv) {
         }
 
         if (si > 0) {
+            /* Absolute-target pacing instead of "sleep interval_ns after every
+               touch": touch i is scheduled for frame_start + i*interval_ns, and
+               we only sleep the actual remaining gap to that target -- never a
+               fixed relative amount. This is self-correcting: clock_nanosleep()
+               overshoots its requested duration by ~87us on average under WSL2
+               (measured -- see PACING_DRIFT_ISSUE.md), and with a fixed
+               relative interval that overshoot compounds every single call
+               (99.4% of a frame's runtime ends up inside sleep_ns() as a
+               result). Targeting an absolute schedule means a touch that's
+               already at or past its target skips sleeping entirely instead of
+               sleeping interval_ns anyway -- the overshoot from previous calls
+               gets absorbed instead of stacking on top of the next one, and
+               busy frames end up issuing fewer sleep calls exactly when they'd
+               otherwise be accumulating the most error. */
             long interval_ns = (long)((frame_dt_ms * 1e6) / (double)si);
+            uint64_t next_target = frame_start;
             for (long i = 0; i < si && g_running; i++) {
+                next_target += (uint64_t)interval_ns;
+
                 long bin = sched[i];
                 uint64_t bin_lo = bin_boundaries[bin], bin_hi = bin_boundaries[bin + 1];
                 size_t bin_pages = (bin_hi > bin_lo) ? (bin_hi - bin_lo) / 4096 : 0;
@@ -597,7 +614,13 @@ int main(int argc, char **argv) {
                 fprintf(gt, "%llu 0 %llu\n", (unsigned long long)ts_ns(),
                         (unsigned long long)(off / 4096));
 
-                if (interval_ns > 50000) sleep_ns(interval_ns);
+                uint64_t now = ts_ns();
+                if (now < next_target) {
+                    long gap_ns = (long)(next_target - now);
+                    if (gap_ns > 50000) sleep_ns(gap_ns);
+                }
+                /* else: already at or past schedule -- skip sleeping instead
+                   of blindly sleeping interval_ns, so debt doesn't compound. */
             }
         }
 
