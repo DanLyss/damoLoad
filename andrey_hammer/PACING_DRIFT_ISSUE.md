@@ -1,85 +1,132 @@
-# Проблема: дрейф реального времени в цикле `andrey_hammer.c`
+# Pacing drift in `andrey_hammer.c` — investigation, root cause, fix (FIXED)
 
-## Где именно (код)
+## Where (code)
 
-`andrey_hammer/src/andrey_hammer.c`, конец цикла по кадрам:
-
-```c
-long elapsed_ns = (long)(ts_ns() - frame_start);
-long remaining_ns = (long)(frame_dt_ms * 1e6) - elapsed_ns;
-sleep_ns(remaining_ns);   // "досыпает" остаток до номинала
-```
-
-и внутри кадра, цикл по обращениям:
+`andrey_hammer/src/andrey_hammer.c`, the touch loop inside the per-frame
+loop. Original (buggy) version:
 
 ```c
-long interval_ns = (long)((frame_dt_ms * 1e6) / (double)si);  // si = кол-во касаний в кадре
+long interval_ns = (long)((frame_dt_ms * 1e6) / (double)si);  // si = touches this frame
 for (i = 0; i < si; i++) {
     *touch;
     fprintf(gt, ...);
-    if (interval_ns > 50000) sleep_ns(interval_ns);  // пауза между касаниями
+    if (interval_ns > 50000) sleep_ns(interval_ns);  // fixed relative interval, every touch
 }
 ```
 
-## Механизм
+and the end-of-frame padding:
 
-1. Кадр должен длиться ровно `frame_dt_ms` (номинал, из `meta.json`, обычно ~100мс).
-2. Внутри кадра — `si` касаний, между каждым пара `sleep_ns()` (с округлённым интервалом) + `fprintf()` в `gt.log`.
-3. `remaining_ns` в конце кадра может уйти в минус (если `elapsed_ns` уже превысил номинал) — тогда `sleep_ns` ничего не делает, кадр просто заканчивается позже. **Долг никуда не переносится** — следующий кадр стартует свой отсчёт заново.
+```c
+long remaining_ns = (long)(frame_dt_ms * 1e6) - elapsed_ns;
+sleep_ns(remaining_ns);   // pad out to nominal frame_dt_ms
+```
 
-**Проверено прямым профилированием (не предположение) — где именно уходит время.** Добавлены таймеры вокруг каждого под-этапа кадра (математика/запись/`fprintf`/`sleep_ns`), прогнано 254 кадра на реальных `code3.json`+`meta3.json`:
+## Symptom
 
-| Компонент | Суммарно за прогон | Доля от общего времени |
+`andrey_hammer` frames ran well over their nominal `frame_dt_ms`
+(configured, from `meta.json`, typically ~100ms) — measured mean 139.03ms
+(+38%) in one run, with real frame-to-frame variance (stdev 11.15ms,
+range 112–184ms). `remaining_ns` in the end-of-frame padding regularly
+went negative once a frame was already running long, so `sleep_ns` there
+did nothing — no debt was ever carried or repaid between frames.
+
+## Root cause — verified by direct profiling, not inferred
+
+Added timers around each per-frame sub-phase (math, memory write,
+`fprintf`, `sleep_ns`) in a throwaway instrumented build, ran the full
+254-frame sequence on real `code3.json`+`meta3.json`:
+
+| Component | Total across run | Share of total time |
 |---|---|---|
-| Математика (10 каналов + Super-Gaussian профиль) | 13.69 мс | **0.04%** |
-| Запись в память (`*region = ...`) | 19.69 мс | 0.06% |
-| `fprintf` в `gt.log` | 114.98 мс | 0.38% |
-| **`sleep_ns()` (обёртка над `clock_nanosleep`)** | **30352.33 мс** | **99.43%** |
+| Math (10 channels + Super-Gaussian profile) | 13.69 ms | **0.04%** |
+| Memory writes | 19.69 ms | 0.06% |
+| `fprintf` (gt.log lines) | 114.98 ms | 0.38% |
+| **`sleep_ns()` calls** | **30352.33 ms** | **99.43%** |
 
-**Математика — не причина** (0.04% времени, абсолютно ничтожно даже при 254 кадрах × 10 каналов × 170 бинов × 3 моды). Причина — сам `clock_nanosleep()`:
+**Not the math** — 0.04% of total time, negligible even at 254 frames ×
+10 channels × 170 bins × 3 modes. The overshoot (5007.71ms total, +19.6%)
+was almost entirely (4835.23ms, 96.6%) accumulated *per-call* oversleep
+inside `clock_nanosleep()` itself:
 
 ```
-Ожидаемая суммарная пауза (по номиналу):  25517.09 мс
-Реальная суммарная пауза:                 30352.33 мс
-Разница:                                    4835.23 мс  из  5007.71 мс общего overshoot (96.6%)
-Средний "пересып" на один вызов:            ~86.75 мкс  ×  55737 вызовов за прогон
+Expected total sleep (== nominal total):  25517.09 ms
+Actual total sleep:                       30352.33 ms
+Average oversleep per call:               ~86.75 us  ×  55737 calls this run
 ```
 
-Каждый отдельный вызов `sleep_ns()` под WSL2 в среднем спит примерно на **87 микросекунд дольше**, чем запрошено (накладные расходы виртуализированного таймера/планировщика гипервизора). Это и есть точный механизм зависимости "больше касаний в кадре (`si`) → дольше кадр": больше касаний = больше вызовов `sleep_ns()` = больше накопленного пересыпа. Корреляция r=0.705 между `si` и длительностью кадра (см. ниже) — прямое следствие этого, не какой-то отдельный эффект.
+Each individual `clock_nanosleep()` call under WSL2 sleeps ~87
+microseconds longer than requested — virtualized timer/scheduler
+wake-up overhead. More touches in a frame (`si`) means more calls means
+more accumulated oversleep — this is the actual mechanism behind the
+touch-count/frame-duration correlation (Pearson r = 0.705) found earlier
+by just eyeballing the numbers, not a separate effect.
 
-## Количественные факты (замерено, не предположение)
+This also killed the originally-proposed fix (compensate debt at the end
+of each frame): the overshoot accumulates *inside* the touch loop's many
+small sleeps, not in `remaining_ns` — which is usually already ≤0 by the
+time it's reached, i.e. there's nothing left there to shrink.
 
-| Величина | Значение |
-|---|---|
-| Номинал | 100.461 мс/кадр |
-| Реально (прогон 1) | среднее ~124 мс/кадр (+23%) |
-| Реально (прогон 2) | среднее ~139.03 мс/кадр (+38%), stdev 11.15мс, диапазон 112–184мс |
-| Реально (та же пара, др. замер) | среднее ~119.84 мс/кадр, stdev 5.53мс |
-| Корреляция длительности кадра с числом касаний в нём | **r = 0.705** (не случайный шум — систематическая зависимость от контента) |
-| Разброс числа касаний в кадре | 117–376, среднее 219.4 |
+## Fix — absolute-target pacing
 
-Величина эффекта нестабильна между прогонами (23% vs 38% overrun) — то есть это не константа, а зависит от текущей нагрузки на систему/планировщик WSL2 в момент запуска.
+Instead of sleeping a fixed `interval_ns` after every touch, touch *i* is
+scheduled against an absolute target time (`frame_start + i*interval_ns`)
+and only sleeps the actual remaining gap to that target — or skips
+sleeping entirely if already at or past it:
 
-## Что это реально портит
+```c
+uint64_t next_target = frame_start;
+for (i = 0; i < si; i++) {
+    next_target += interval_ns;
+    *touch;
+    fprintf(gt, ...);
+    uint64_t now = ts_ns();
+    if (now < next_target) {
+        long gap_ns = (long)(next_target - now);
+        if (gap_ns > 50000) sleep_ns(gap_ns);
+    }
+    // else: already at/past schedule -- skip sleeping, don't compound debt
+}
+```
 
-- **Уже почищено (не текущая проблема):** раньше это приводило к обрезанию записи DAMON по таймауту (`damo record` завершался раньше, чем `andrey_hammer` заканчивал работу) — исправлено увеличением запаса таймаута в `run_andrey.sh`.
-- **Текущая проблема:** сравнения нашего вывода против `sim_raw3.txt` (который не имеет реальных меток времени, предполагает идеально равномерные 101мс/кадр) — там дрейф реально ломает сопоставление "какой кадр какому моменту соответствует", особенно в "плотные" по активности периоды. Time-profile r там держится на ~0.31 против потолка ~0.69 (что достижимо даже при идеальном пейсинге, из-за случайности самой модели).
+Self-correcting: an ~87us oversleep on one touch means the *next* touch's
+target-check finds itself already caught up, so it just skips its own
+sleep instead of stacking another full interval on top. Busy frames
+naturally issue fewer sleep calls exactly when they'd otherwise
+accumulate the most error — no batch-size tuning needed.
 
-## Что это НЕ портит (важно для объективности)
+## Verified
 
-- **Само содержимое (какие значения посчитаны) — корректно.** Это чисто проблема **синхронизации с настенными часами**, не вычислительная ошибка. Пространственная форма (r≈0.95-1.00) и магнитуда (в пределах нескольких % при правильном подсчёте) от этого не страдают.
-- **Сравнение `gt.log` vs DAMON (в рамках одного прогона) — почти не страдает** (проверено: реальные протяжённости записей расходятся всего на ~3%, `compare_io.py` взвешивает по настоящим меткам времени, а не по предположению о равномерности) — там потолок в 0.89 объясняется в основном собственным шумом выборки DAMON, не этим багом.
+Same real `code3.json`+`meta3.json`, 254 steps, before vs after:
 
-## Статус
+| | Before | After |
+|---|---|---|
+| Mean frame duration | 139.03 ms (+38%) | **100.56 ms (+0.1%)** |
+| stdev | 11.15 ms | **0.06 ms** |
+| Range | 112–184 ms | 100.48–100.86 ms |
+| Touch-count/duration correlation (r) | 0.705 | **0.017** |
 
-Не исправлено.
+Drift is essentially eliminated — both the mean overshoot and the
+content-coupling are gone.
 
-**Важное уточнение после профилирования (см. выше): изначально предложенный "долговой" фикс на уровне кадра — не главное.** Раз 99.43% overshoot'а — это накопленный пересып внутри вызовов `sleep_ns()` в цикле касаний (не финальный `remaining_ns` в конце кадра, который и так почти всегда ≤0), то компенсация долга МЕЖДУ кадрами почти нечего компенсировать — сам избыток создаётся **внутри** кадра, до того как доходит до финального "досыпа".
+## What this did and didn't change downstream
 
-Более прямые направления фикса (бьют по реальному источнику — числу вызовов `clock_nanosleep`):
+- **`gt_to_io.py`-vs-DAMON comparison (same run, both real timestamps):**
+  was never meaningfully hurt by this bug in the first place (checked
+  directly — see `ANDREY_PIPELINE.md`'s "Known issues"), so no material
+  change expected here from the fix.
+- **Comparisons against `sim_raw3.txt`** (which has no real timestamps of
+  its own, assumes a uniform frame cadence): time-profile r stayed
+  ~0.29–0.31 before and after the fix — essentially unchanged. Turned out
+  this residual was never mainly caused by the pacing bug: the "~0.69
+  ceiling" it was originally measured against was a single lucky sample,
+  not a real baseline. Re-checked across 5 seeds of Python-vs-`sim_raw3.txt`:
+  range 0.20–0.44, mean ≈0.36 — `andrey_hammer`'s 0.29–0.31 was already
+  normal for this passport's inherent randomness, independent of the
+  pacing bug. See `ANDREY_PIPELINE.md` for the reproduction command.
+- The fix is still correct and worth having on its own terms — frame
+  timing is now genuinely trustworthy, not just "close enough that it
+  happened not to corrupt this one metric."
 
-1. **Меньше вызовов sleep, крупнее паузы.** Вместо "поспать после каждого касания" — группировать касания в пачки и спать реже, но дольше за раз. Раз перерасход ~постоянный на вызов (~87мкс), меньше вызовов = меньше накопленной ошибки.
-2. **Долговой пейсинг внутри цикла касаний** (не только в конце кадра) — сравнивать, где мы должны быть по расписанию, и если уже отстаём — пропускать/сокращать очередной sleep, а не слепо спать `interval_ns` каждый раз.
-3. **Гибрид sleep+busy-wait**: спать чуть меньше запрошенного, затем добирать точность коротким циклом опроса часов (`clock_gettime` в цикле) вместо ещё одного `clock_nanosleep()` — стандартный приём для точного пейсинга в реальном времени, ценой доли CPU.
+## Status
 
-Вариант 1 или 2 — вероятно, минимальные по объёму правки и предпочтительны.
+**Fixed and verified**, committed to `andrey_hammer/src/andrey_hammer.c`.

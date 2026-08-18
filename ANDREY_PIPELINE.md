@@ -110,7 +110,7 @@ io-vs-io compare (`compare_io.py`) against `sim_raw3.txt`.
 | `sim_raw3.txt` | Real example output of the Python model on `code3.json`+`meta3.json` (io-format text, 254 snapshots) | Given, real — use as the shape reference |
 | `damo_replay.md` | Investigation notes: why `damo replay` (damo's own built-in replay subcommand) does NOT reproduce a real address-space pattern — motivates `andrey_hammer`'s design | Given, real |
 | `compare.py`, `scripts/build_kdamonds.py`, `patches/` | Pre-existing DAMON-comparison tooling this pipeline reuses (gt.log-vs-DAMON heatmap renderer, kdamonds JSON builder, required damo patches). An older, unrelated `memtest`/`hammer`/`run_memtest.sh` project used to live in this repo alongside these — removed from this branch since it's not part of the passport pipeline; only these two files were actual dependencies | Given, real, unchanged |
-| **`andrey_hammer/`** | **New.** C port of the passport model that drives LIVE memory accesses in real time (not a pre-rendered file). See `andrey_hammer/README.md` for full design rationale | **Built, compiled, checked against `sim_raw3.txt` on real `code3.json`+`meta3.json`: spatial-profile r=0.89, magnitude within ~4% once width-weighted (see "Known issues"). Time-axis fidelity still degraded by a real pacing bug** |
+| **`andrey_hammer/`** | **New.** C port of the passport model that drives LIVE memory accesses in real time (not a pre-rendered file). See `andrey_hammer/README.md` for full design rationale | **Built, compiled, checked against `sim_raw3.txt` on real `code3.json`+`meta3.json`: spatial-profile r≥0.95, magnitude within ~6% once width-weighted (see "Known issues"). Pacing drift fixed (mean overshoot 19.6%→0.1%, see "Known issues")** |
 | **`run_andrey.sh`** | **New.** Automated build → run → `damo record` → compare orchestration | **Run end-to-end for real** (root, live DAMON) — see "Live DAMON test results" below |
 | **`compare_io.py`** | **New.** Direct io-format-vs-io-format shape comparison (Pearson r, cosine similarity, normalized RMSE, separate time/space-profile correlations, ASCII heatmap) | **Built, tested** — self-comparison sanity checks, and used for the C-vs-Python math check below |
 | **`andrey_hammer/gt_to_io.py`** | **New.** Converts `gt.log`+`gt.log.frames` into io-format text directly, no DAMON involved — isolates replay fidelity from DAMON's own measurement noise | **Built, tested** — see "Known issues" below (r=0.97 vs `sim_raw3.txt`) |
@@ -158,44 +158,55 @@ now fixed:
   (`$STEPS`) and `space_cols` (read from `meta.json`).
 
 With both fixed, all three `compare_io.py` comparisons ran clean. **Numbers
-below are post-timeout-fix** (see "Known issues" — an earlier version of
-this table showed much worse time-profile r before that fix; kept here
-only as the current, correct baseline):
+below are post-timeout-fix, pre-pacing-fix** (see "Known issues" for the
+pacing fix and why it barely moved these particular numbers — kept here
+as the historical before/after record, not because it's stale):
 
 | Compare | Shape r | Space r | Time r | Total accesses ratio |
 |---|---|---|---|---|
 | `sim_raw3.txt` vs DAMON's observation | 0.95 | ~1.00 | 0.31 | **0.63** |
 | `sim_raw3.txt` vs `gt_to_io.py` (no DAMON) | 0.97 | 1.00 | 0.31 | **1.06** |
 | `gt_to_io.py` vs DAMON's observation | 0.99 | 0.999 | **0.89** | **0.59** |
-| `sim_raw3.txt` vs Andrey's own pipeline, different seed | 0.97 | 1.00 | 0.69 | 0.99 |
 
-The last row is a baseline, not a result of this repo's code: it's
-`generate.py (1).txt` regenerating from the same `code3.json`+`meta3.json`
-with `--seed 0` instead of whatever seed produced `sim_raw3.txt`, compared
-against `sim_raw3.txt` itself. Since the model has genuine stochastic
-noise (the AR(1) cascade), no two *independent* runs — Python or C — will
-ever match time-for-time exactly; **0.69 is roughly the practical ceiling
-for time-profile r when comparing against a different random
-realization** of the same passport.
+The third row is different in kind from the other two: both sides come
+from the *same* `andrey_hammer` run, so they're not independent
+realizations — DAMON is directly watching what `gt_to_io.py` also
+recorded. Once the `--timeout` truncation bug (below) was fixed, this
+correlation jumped to **0.89**. The other two rows, compared against the
+*independent* `sim_raw3.txt` (a different random realization of the same
+passport), stayed around 0.31.
 
-The third row (`gt_to_io.py` vs DAMON's observation) is different in
-kind from the other three: both sides come from the *same* `andrey_hammer`
-run, so they're not independent realizations — DAMON is directly watching
-what `gt_to_io.py` also recorded. Once the `--timeout` truncation bug
-(below) was fixed, this correlation jumped to **0.89**, higher than the
-0.69 cross-seed ceiling, exactly as expected: same-run correspondence
-should be tighter than cross-run. The other two rows, compared against
-the independent `sim_raw3.txt`, stayed around 0.31 — bounded by that same
-~0.69 ceiling from below, with the remaining gap presumably being the
-residual (non-truncation) part of the pacing-drift bug, still open.
+**A note on that 0.31 — an earlier version of this doc anchored it against
+a "~0.69 cross-seed ceiling" that turned out to be a single lucky sample,
+not a real ceiling.** Re-ran the same cross-seed check (`generate.py (1).txt`
+vs `sim_raw3.txt`) across 5 different seeds instead of one:
+
+```
+seed=1: 0.20   seed=2: 0.39   seed=3: 0.32   seed=4: 0.43   seed=5: 0.44
+```
+
+Mean ≈0.36, range 0.20–0.44 — **the earlier "0.69" was the high end of
+normal variance, not a stable benchmark.** `andrey_hammer`'s 0.29–0.31
+(both before and after the pacing fix below — see "Known issues" for why
+fixing the drift barely changed this number) sits comfortably inside that
+same normal range. There was never really a "gap below the ceiling" to
+close here; the earlier framing overstated how much this specific number
+was capped by the pacing bug. Reproduce with:
+```bash
+for s in 1 2 3 4 5; do
+    python3 "generate.py (1).txt" --passport code3.json --meta meta3.json \
+        --output-raw-log /tmp/py_seed$s.txt --steps 254 --seed $s
+    python3 compare_io.py sim_raw3.txt /tmp/py_seed$s.txt --no-heatmap
+done
+```
 
 Reading the rest: **spatial shape is essentially solved** (r≥0.95
 everywhere, space-profile r≈1.0) — the model math and the replay both
 reproduce the right hot/cold pattern. **Magnitude is accurate when DAMON
-isn't involved** (1.06 vs the original, 0.99 for Python-vs-Python) but
-**DAMON itself only sees roughly 50-65% of the real activity** — consistent
-with DAMON's known 5ms-sample/200Hz-cap sampling limit (see root README's
-"Key DAMON Behaviors"), not a bug in this pipeline.
+isn't involved** (1.06 vs the original) but **DAMON itself only sees
+roughly 50-65% of the real activity** — consistent with DAMON's known
+5ms-sample/200Hz-cap sampling limit (see root README's "Key DAMON
+Behaviors"), not a bug in this pipeline.
 
 ## Known issues
 
@@ -255,69 +266,65 @@ Verified: re-ran end-to-end, `gt_to_io.py`-vs-DAMON time-profile r went
 from **0.15 to 0.89**. See "Live DAMON test results" above for the full
 before/after picture.
 
-**Still open: the pacing drift itself.** `andrey_hammer.c`'s frames still
-run over their nominal `frame_dt_ms` (measured: mean 139.03ms real vs
-100.461ms nominal, ~38% over, in the run above) — the `--timeout` fix
-above just stops that drift from truncating the DAMON recording, it
-doesn't fix the drift itself.
+**FIXED: the pacing drift itself.** `andrey_hammer.c`'s frames used to run
+well over their nominal `frame_dt_ms` (measured: mean 139.03ms real vs
+100.461ms nominal, ~38% over, in one run) — the `--timeout` fix above
+only stopped that drift from truncating the DAMON recording, it didn't
+fix the drift itself.
 
 Root-caused with direct profiling (timers around each per-frame
 sub-phase, see `andrey_hammer/PACING_DRIFT_ISSUE.md` for the full
-writeup): **it's not the math.** Computing all 10 channels + the
+writeup): **it was never the math.** Computing all 10 channels + the
 Super-Gaussian profile costs 13.69ms total across a 254-frame run
-(0.04% of total time). 99.43% of the time is inside `sleep_ns()` calls —
-of the 5007.71ms total overshoot, 4835.23ms (96.6%) is accumulated
+(0.04% of total time). 99.43% of the time was inside `sleep_ns()` calls —
+of the 5007.71ms total overshoot, 4835.23ms (96.6%) was accumulated
 per-call oversleep in `clock_nanosleep()` itself under WSL2 (~87µs over
 the requested duration, per call, across 55737 calls) — this is also the
-actual mechanism behind the earlier-found r=0.705 touch-count/duration
-correlation: more touches per frame means more `sleep_ns()` calls means
-more accumulated oversleep, not slower computation.
+mechanism behind the touch-count/duration correlation noted below.
 
-This also means the debt-based fix originally proposed here (compensate
-at the end of each frame) wouldn't help much — the overshoot accumulates
-*inside* the touch loop's many small sleeps, not in the final
-`remaining_ns` padding (which is usually already ≤0 by the time it's
-reached, i.e. there's nothing left to shrink further). See
-`andrey_hammer/PACING_DRIFT_ISSUE.md` for the fix directions that
-actually target the touch loop instead.
+Fixed by switching from "sleep a fixed `interval_ns` after every touch"
+to **absolute-target pacing**: touch *i* is scheduled for
+`frame_start + i*interval_ns`, and each touch only sleeps the actual
+remaining gap to its own target — or skips sleeping entirely if already
+at or past it. This self-corrects: a `clock_nanosleep()` overshoot on one
+touch means the next touch's target-check finds itself already caught
+up, so it just skips its own sleep instead of adding another full
+interval on top. Frame duration used to be genuinely **correlated with
+how much work is in the frame** (Pearson r = 0.705 between touch count
+and real duration — more touches meant more `sleep_ns()` calls meant
+more accumulated overhead, not slower computation); after the fix, that
+correlation is r = 0.017.
 
-The drift isn't uniform jitter, either — frame duration is genuinely
-**correlated with how much work is in the frame**: Pearson r = 0.705
-between a frame's touch count and its real wall-clock duration in one
-run (more touches → more per-touch `sleep_ns()` calls → more accumulated
-overhead). Busy periods run measurably slower than quiet ones, not just
-noisily-around-the-mean slower.
+Verified on the same real `code3.json`+`meta3.json`, 254 steps:
 
-**But — checked carefully, and corrected after getting this wrong once —
-this drift does NOT meaningfully hurt the `gt_to_io.py`-vs-DAMON
-comparison specifically.** Both sides of that comparison carry real,
-accurate timestamps (`gt.log`'s per-touch `ts_ns`, and DAMON's own
-wall-clock sampling), and `compare_io.py`'s grid-building weights every
-snapshot by its *actual* recorded start/end time, not by an assumed-even
-index-to-time mapping. A frame that really took 137ms still gets binned
-into the real-time rows it actually overlapped — irregular frame lengths
-don't corrupt that. Checked directly: `gt.log`'s and DAMON's overall
-recorded spans came out to 30.44s vs 29.60s in one paired run — only
-~3% apart, not the kind of gap that would explain a large correlation
-loss on its own.
+| | Before | After |
+|---|---|---|
+| Mean frame duration | 139.03 ms (+38%) | 100.56 ms (**+0.1%**) |
+| stdev | 11.15 ms | **0.06 ms** |
+| Range | 112–184 ms | 100.48–100.86 ms |
+| Touch-count/duration r | 0.705 | **0.017** |
 
-The drift *does* still hurt comparisons against `sim_raw3.txt` specifically,
-because that file has no real timestamps of its own — it assumes a
-perfectly uniform `101.000 ms`/frame mapping (synthetic, from Python,
-never executed against a clock). Against a partner with real, irregular
-timestamps, an assumed-uniform reference is exactly where index-to-time
-warping (worse during busy stretches, described above) actually bites.
-This is the more likely explanation for the ~0.31 residual in the two
-`sim_raw3.txt` comparisons, not the ~0.69 cross-seed ceiling alone.
+**Surprise: this had almost no effect on the `sim_raw3.txt` comparisons**
+(0.31 → 0.29, essentially unchanged) — the drift wasn't actually the
+dominant cause of that residual after all. See the "A note on that 0.31"
+callout above: the ~0.69 figure that residual was measured against
+turned out to be an outlier, not a real ceiling — re-checked across 5
+seeds, the real range is 0.20–0.44, and 0.29–0.31 was already normal for
+this passport's inherent randomness, pacing bug or not. The fix is still
+correct and worth having (frame timing is now actually trustworthy, not
+just "close enough that it didn't corrupt this one metric"), just not
+for the reason originally hypothesized.
 
-So: the remaining gap in `gt_to_io.py`-vs-DAMON (0.89, not closer to 1.0)
-is more likely DAMON's own sampling noise — it's already known to only
-observe roughly half of real activity (see magnitude ratios above), so
-some correlation loss from sparse, probabilistic sampling is expected
-regardless of timing — plus that small ~3% residual span mismatch, not
-the pacing drift's content-coupling. Fixing the pacing loop should mainly
-help the `sim_raw3.txt` comparisons; it may do little for the DAMON ones,
-which are more fundamentally capped by DAMON's own measurement limits.
+It's still true, and unaffected by any of the above, that this drift
+never meaningfully hurt the `gt_to_io.py`-vs-DAMON comparison specifically
+(checked directly: both sides carry real timestamps and are binned by
+actual recorded time, not assumed-uniform index position; overall
+recorded spans came out 30.44s vs 29.60s in one paired run, only ~3%
+apart). That comparison's 0.89 ceiling is attributable to DAMON's own
+sampling noise (it's already known to only observe roughly half of real
+activity) plus that small residual span mismatch — worth re-checking
+against a fresh live run with the pacing fix in place, but not expected
+to move much.
 
 **`andrey_hammer/gt_to_io.py`** — converts `gt.log` + `gt.log.frames`
 straight into an io-format text file, bypassing DAMON's own 5ms/200Hz
