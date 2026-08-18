@@ -261,12 +261,47 @@ before/after picture.
 ~38% over, in the run above) — the `--timeout` fix above just stops that
 drift from truncating the DAMON recording, it doesn't fix the drift
 itself. It doesn't carry debt across frames — each frame just pads with
-whatever time is left, so overruns don't get caught up. This is likely
-still what accounts for the residual gap between the two `sim_raw3.txt`
-comparisons (~0.31) and the ~0.69 cross-seed ceiling established above —
-worth fixing with a debt-based pacing loop (accumulate `elapsed -
-frame_dt_ms` and let it eat into the next frame's budget) if closing that
-gap matters.
+whatever time is left, so overruns don't get caught up. Worth fixing with
+a debt-based pacing loop (accumulate `elapsed - frame_dt_ms` and let it
+eat into the next frame's budget).
+
+The drift isn't uniform jitter, either — frame duration is genuinely
+**correlated with how much work is in the frame**: Pearson r = 0.705
+between a frame's touch count and its real wall-clock duration in one
+run (more touches → more per-touch `sleep_ns()` calls → more accumulated
+overhead). Busy periods run measurably slower than quiet ones, not just
+noisily-around-the-mean slower.
+
+**But — checked carefully, and corrected after getting this wrong once —
+this drift does NOT meaningfully hurt the `gt_to_io.py`-vs-DAMON
+comparison specifically.** Both sides of that comparison carry real,
+accurate timestamps (`gt.log`'s per-touch `ts_ns`, and DAMON's own
+wall-clock sampling), and `compare_io.py`'s grid-building weights every
+snapshot by its *actual* recorded start/end time, not by an assumed-even
+index-to-time mapping. A frame that really took 137ms still gets binned
+into the real-time rows it actually overlapped — irregular frame lengths
+don't corrupt that. Checked directly: `gt.log`'s and DAMON's overall
+recorded spans came out to 30.44s vs 29.60s in one paired run — only
+~3% apart, not the kind of gap that would explain a large correlation
+loss on its own.
+
+The drift *does* still hurt comparisons against `sim_raw3.txt` specifically,
+because that file has no real timestamps of its own — it assumes a
+perfectly uniform `101.000 ms`/frame mapping (synthetic, from Python,
+never executed against a clock). Against a partner with real, irregular
+timestamps, an assumed-uniform reference is exactly where index-to-time
+warping (worse during busy stretches, described above) actually bites.
+This is the more likely explanation for the ~0.31 residual in the two
+`sim_raw3.txt` comparisons, not the ~0.69 cross-seed ceiling alone.
+
+So: the remaining gap in `gt_to_io.py`-vs-DAMON (0.89, not closer to 1.0)
+is more likely DAMON's own sampling noise — it's already known to only
+observe roughly half of real activity (see magnitude ratios above), so
+some correlation loss from sparse, probabilistic sampling is expected
+regardless of timing — plus that small ~3% residual span mismatch, not
+the pacing drift's content-coupling. Fixing the pacing loop should mainly
+help the `sim_raw3.txt` comparisons; it may do little for the DAMON ones,
+which are more fundamentally capped by DAMON's own measurement limits.
 
 **`andrey_hammer/gt_to_io.py`** — converts `gt.log` + `gt.log.frames`
 straight into an io-format text file, bypassing DAMON's own 5ms/200Hz
