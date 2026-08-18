@@ -26,7 +26,7 @@ if [ ! -x "$DAMO" ]; then
 fi
 
 PASSPORT=${1:-"$SCRIPT_DIR/code3.json"}
-META=${2:-"$SCRIPT_DIR/andrey_hammer/meta.example.json"}
+META=${2:-"$SCRIPT_DIR/meta3.json"}
 GT_OUT=${3:-/tmp/andrey_gt.log}
 DAMON_OUT=${4:-/root/andrey_damon.data}
 shift $(( $# < 4 ? $# : 4 )) 2>/dev/null
