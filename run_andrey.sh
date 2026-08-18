@@ -103,7 +103,7 @@ fi
 
 # ── 3. set up DAMON ──────────────────────────────────────────────────────────
 echo "==> Setting up DAMON..."
-echo off > /sys/kernel/mm/damon/admin/kdamonds/0/state 2>/dev/null || true
+{ [ -e /sys/kernel/mm/damon/admin/kdamonds/0/state ] && echo off > /sys/kernel/mm/damon/admin/kdamonds/0/state; } 2>/dev/null || true
 sleep 0.3
 
 # how long to record: read steps/frame_dt straight out of andrey_hammer's own
@@ -147,10 +147,12 @@ echo "==> Comparing with DAMON..."
 LOGS_DIR="$ANDREY_DIR/results"
 mkdir -p "$LOGS_DIR"
 LOG_FILE="$LOGS_DIR/$(basename "$PASSPORT" .json)_$(date +%H%M%S).txt"
-# no heatmap_time_rows/space_cols override here -- there's no workload.json
-# to read them from, so let compare.py fall back to its own
-# defaults (duration-derived rows, n_pages columns)
-RESOL=""
+# compare.py's later positional args (damon_base/damon_max/damo_exe) only
+# land correctly if time_rows/space_cols are BOTH present -- an empty RESOL
+# here would shift DAMON_MIN into the time_rows slot and crash compare.py's
+# int() parsing, so always pass real values instead of leaving it optional.
+SPACE_COLS=$(python3 -c "import json; print(json.load(open('$META'))['matrix_geometry']['cols'])" 2>/dev/null || echo 20)
+RESOL="$STEPS $SPACE_COLS"
 python3 "$COMPARE_PY" "$DAMON_OUT" "$GT_OUT" $RESOL "$DAMON_MIN" "$DAMON_MAX" "$DAMO" | tee >(sed 's/\x1b\[[0-9;]*m//g' > "$LOG_FILE")
 echo ""
 echo "==> Log saved: $LOG_FILE"
@@ -163,7 +165,7 @@ echo "==> Log saved: $LOG_FILE"
 # hidden inside compare_io.py.
 echo ""
 echo "==> Materializing io-format from DAMON's recording..."
-"$DAMO" report access --input "$DAMON_OUT" --raw > "$DAMON_IO_OUT"
+"$DAMO" report access --input "$DAMON_OUT" --raw_form > "$DAMON_IO_OUT"
 echo "    $DAMON_IO_OUT"
 
 # ── 8. compare two io-format files ──────────────────────────────────────────
@@ -176,6 +178,32 @@ if [ -f "$ORIGINAL_IO" ]; then
     echo "==> Log saved: ${LOG_FILE%.txt}_io.txt"
 else
     echo ""
-    echo "==> Skipping io-format vs io-format comparison: '$ORIGINAL_IO' not found."
+    echo "==> Skipping comparisons against the original: '$ORIGINAL_IO' not found."
     echo "    Pass it explicitly: run_andrey.sh $PASSPORT $META $GT_OUT $DAMON_OUT path/to/original.io.txt"
+fi
+
+# ── 9. materialize io-format from gt.log directly (no DAMON) ────────────────
+# Isolates replay fidelity from DAMON's own 5ms/200Hz sampling noise -- see
+# ANDREY_PIPELINE.md's "Three different comparisons" table.
+GT_IO_OUT="${GT_OUT%.log}.io.txt"
+if [ -f "${GT_OUT}.frames" ]; then
+    echo ""
+    echo "==> Materializing io-format from gt.log directly (no DAMON)..."
+    python3 "$ANDREY_DIR/gt_to_io.py" --gt "$GT_OUT" --frames "${GT_OUT}.frames" --meta "$META" --output "$GT_IO_OUT"
+
+    if [ -f "$ORIGINAL_IO" ]; then
+        echo ""
+        echo "==> Comparing io-format vs io-format (original vs gt.log, no DAMON)..."
+        python3 "$COMPARE_IO_PY" "$ORIGINAL_IO" "$GT_IO_OUT" \
+            | tee >(sed 's/\x1b\[[0-9;]*m//g' > "${LOG_FILE%.txt}_io_gt.txt")
+        echo "==> Log saved: ${LOG_FILE%.txt}_io_gt.txt"
+    fi
+
+    echo ""
+    echo "==> Comparing io-format vs io-format (DAMON's observation vs gt.log, no original) ..."
+    python3 "$COMPARE_IO_PY" "$GT_IO_OUT" "$DAMON_IO_OUT" \
+        | tee >(sed 's/\x1b\[[0-9;]*m//g' > "${LOG_FILE%.txt}_io_damon_vs_gt.txt")
+    echo "==> Log saved: ${LOG_FILE%.txt}_io_damon_vs_gt.txt"
+else
+    echo "==> Skipping gt.log-based io-format (no ${GT_OUT}.frames found)."
 fi

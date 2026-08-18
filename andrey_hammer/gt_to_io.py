@@ -5,7 +5,7 @@ into an io-format text file, WITHOUT going through DAMON at all.
 
 Why: DAMON only samples one page per region every 5ms (capped at 200Hz,
 lossy by construction — see the main README's "Key DAMON Behaviors"
-section). `damo report access --raw` on a live recording therefore reflects
+section). `damo report access --raw_form` on a live recording therefore reflects
 DAMON's *observation* of andrey_hammer, not what andrey_hammer actually did.
 This script builds the io-format file straight from andrey_hammer's own
 exact record instead, so `compare_io.py` can answer a different question:

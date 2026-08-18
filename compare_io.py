@@ -9,7 +9,7 @@ Final step of the andrey_hammer pipeline:
      before compression)       observed while replaying the
          │                      compressed passport)
          ▼                            ▼
-    damo report access --raw    damo report access --raw
+    damo report access --raw_form    damo report access --raw_form
          │                            │
          └──────────── compare_io.py ────────────► report
 
@@ -30,7 +30,7 @@ This is produced by `damo report access --input <damon.data> --raw`, and is
 also exactly what this repo's model scripts (format_raw.py, simulate.py)
 already emit directly — see sim_raw3.txt for a real example. A path ending
 in `.data` is treated as a raw DAMON recording and piped through `damo
-report access --raw` first; anything else is read as this text directly.
+report access --raw_form` first; anything else is read as this text directly.
 
 Why this can't be a literal address diff: andrey_hammer deliberately does
 NOT reuse the original trace's literal virtual addresses (see
@@ -120,7 +120,7 @@ def parse_io_text(text):
 def load_io_format(path, damo_exe='damo', force_convert=None):
     is_raw_data = path.endswith('.data') if force_convert is None else force_convert
     if is_raw_data:
-        cmd = [damo_exe, 'report', 'access', '--input', path, '--raw']
+        cmd = [damo_exe, 'report', 'access', '--input', path, '--raw_form']
         res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         if res.returncode != 0:
             print(f'  ERROR running {" ".join(cmd)}:\n{res.stderr[:500]}', file=sys.stderr)
@@ -289,8 +289,8 @@ def main():
     ap.add_argument('--rows', type=int, default=30, help='time resolution (default: 30)')
     ap.add_argument('--cols', type=int, default=20, help='address-fraction resolution (default: 20)')
     ap.add_argument('--damo', default='damo', help='damo executable (for .data inputs)')
-    ap.add_argument('--convert-a', action='store_true', help='force A through `damo report access --raw`')
-    ap.add_argument('--convert-b', action='store_true', help='force B through `damo report access --raw`')
+    ap.add_argument('--convert-a', action='store_true', help='force A through `damo report access --raw_form`')
+    ap.add_argument('--convert-b', action='store_true', help='force B through `damo report access --raw_form`')
     ap.add_argument('--no-heatmap', action='store_true', help='skip ASCII heatmap rendering')
     args = ap.parse_args()
 

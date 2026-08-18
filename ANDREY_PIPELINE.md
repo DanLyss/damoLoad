@@ -89,7 +89,7 @@ gt.log + gt.log.frames (exactly what andrey_hammer really did)
 
 `run_andrey.sh` automates the right-hand (DAMON) route end to end: build →
 run `andrey_hammer` → `damo record` in parallel → GT-vs-DAMON compare
-(`compare.py`) → materialize io-format (`damo report access --raw`) →
+(`compare.py`) → materialize io-format (`damo report access --raw_form`) →
 io-vs-io compare (`compare_io.py`) against `sim_raw3.txt`.
 
 **Three different comparisons, three different questions** — all via
@@ -98,8 +98,8 @@ io-vs-io compare (`compare_io.py`) against `sim_raw3.txt`.
 | Compare | Answers |
 |---|---|
 | `sim_raw3.txt` vs `gt_to_io.py` output | Does the C math port match the Python reference? (no DAMON either side) |
-| `sim_raw3.txt` vs `damo report access --raw` output | Does DAMON's *observation* of the live replay match the original? (DAMON's 5ms/200Hz sampling noise included) |
-| `gt_to_io.py` output vs `damo report access --raw` output | How much noise does DAMON's own sampling add, isolated from everything else? |
+| `sim_raw3.txt` vs `damo report access --raw_form` output | Does DAMON's *observation* of the live replay match the original? (DAMON's 5ms/200Hz sampling noise included) |
+| `gt_to_io.py` output vs `damo report access --raw_form` output | How much noise does DAMON's own sampling add, isolated from everything else? |
 
 ## What's in this repo, file by file
 
@@ -111,7 +111,7 @@ io-vs-io compare (`compare_io.py`) against `sim_raw3.txt`.
 | `damo_replay.md` | Investigation notes: why `damo replay` (damo's own built-in replay subcommand) does NOT reproduce a real address-space pattern — motivates `andrey_hammer`'s design | Given, real |
 | `compare.py`, `scripts/build_kdamonds.py`, `patches/` | Pre-existing DAMON-comparison tooling this pipeline reuses (gt.log-vs-DAMON heatmap renderer, kdamonds JSON builder, required damo patches). An older, unrelated `memtest`/`hammer`/`run_memtest.sh` project used to live in this repo alongside these — removed from this branch since it's not part of the passport pipeline; only these two files were actual dependencies | Given, real, unchanged |
 | **`andrey_hammer/`** | **New.** C port of the passport model that drives LIVE memory accesses in real time (not a pre-rendered file). See `andrey_hammer/README.md` for full design rationale | **Built, compiled, checked against `sim_raw3.txt` on real `code3.json`+`meta3.json`: spatial-profile r=0.89, magnitude within ~4% once width-weighted (see "Known issues"). Time-axis fidelity still degraded by a real pacing bug** |
-| **`run_andrey.sh`** | **New.** Automated build → run → `damo record` → compare orchestration | **Built. NOT yet run end-to-end** (needs interactive `sudo` — see Testing) |
+| **`run_andrey.sh`** | **New.** Automated build → run → `damo record` → compare orchestration | **Run end-to-end for real** (root, live DAMON) — see "Live DAMON test results" below |
 | **`compare_io.py`** | **New.** Direct io-format-vs-io-format shape comparison (Pearson r, cosine similarity, normalized RMSE, separate time/space-profile correlations, ASCII heatmap) | **Built, tested** — self-comparison sanity checks, and used for the C-vs-Python math check below |
 | **`andrey_hammer/gt_to_io.py`** | **New.** Converts `gt.log`+`gt.log.frames` into io-format text directly, no DAMON involved — isolates replay fidelity from DAMON's own measurement noise | **Built, tested** — see "Known issues" below (r=0.97 vs `sim_raw3.txt`) |
 
@@ -137,6 +137,43 @@ docstring before trusting the filename.
 confidential and lives outside this repo. Not our job to build. Everything
 else needed to test this branch is now present (both `code3.json` and
 `meta3.json` are real).
+
+## Live DAMON test results (first real end-to-end run)
+
+`run_andrey.sh` was run for real for the first time — real root, real `damo
+record`, real `code3.json`+`meta3.json`, 254 steps. Two bugs only showed up
+under this real run (neither reproduces with fake/offline testing) and are
+now fixed:
+
+- `damo report access` doesn't have a plain `--raw` flag on the installed
+  damo version — it's `--raw_form` (the source code's internal attribute
+  is named `fmt.raw`, which is what led to guessing `--raw`; the actual
+  CLI flag is different). Was silently truncating the "materialize
+  io-format" step to an empty file. Fixed in `compare_io.py` and
+  `run_andrey.sh`.
+- `run_andrey.sh` was calling `compare.py` with an empty `$RESOL`
+  (no `time_rows`/`space_cols`), which shifts every later positional
+  argument left and made `compare.py` try to `int()` the `damo` executable
+  path — crashed every time. Fixed by always passing real `time_rows`
+  (`$STEPS`) and `space_cols` (read from `meta.json`).
+
+With both fixed, all three `compare_io.py` comparisons ran clean:
+
+| Compare | Shape r | Space r | Time r | Total accesses ratio |
+|---|---|---|---|---|
+| `sim_raw3.txt` vs DAMON's observation | 0.95 | 0.998 | 0.23 | **0.52** |
+| `sim_raw3.txt` vs `gt_to_io.py` (no DAMON) | 0.97 | 1.00 | 0.33 | **1.06** |
+| `gt_to_io.py` vs DAMON's observation | 0.96 | 0.999 | 0.27 | **0.49** |
+
+Reading this: **spatial shape is essentially solved** (r≥0.95 everywhere,
+space-profile r≈1.0) — the model math and the replay both reproduce the
+right hot/cold pattern. **Magnitude is accurate when DAMON isn't involved**
+(1.06 vs the original) but **DAMON itself only sees about half the real
+activity** (0.52, 0.49) — consistent with DAMON's known 5ms-sample/200Hz-cap
+sampling limit (see root README's "Key DAMON Behaviors"), not a bug in this
+pipeline. **Time-profile r is low across all three** (0.23–0.33), including
+the DAMON-free comparison — confirming the timing-drift issue is in
+`andrey_hammer`'s own pacing loop, not something DAMON introduces.
 
 ## Known issues
 
@@ -167,7 +204,7 @@ shape also checks out: `compare_io.py`-style spatial-profile Pearson r =
 `sum(nr_accesses)` between a merged (`damo`/Python-style) io-format file and
 an unmerged ground-truth log without width-weighting one side — `compare_io.py`
 itself isn't affected by this for its real use case (both sides of a Level-2
-comparison go through `damo report access --raw`, so both are merged the
+comparison go through `damo report access --raw_form`, so both are merged the
 same way and stay comparable).
 
 **Real, still-open issue: timing drift in the live pacing loop.** Under
@@ -191,7 +228,7 @@ straight into an io-format text file, bypassing DAMON's own 5ms/200Hz
 sampling entirely. Useful for separating two different questions: "did
 `andrey_hammer`'s replay match the original passport's model" (this
 script, no DAMON noise) vs "did DAMON *observe* that replay correctly"
-(the `damo report access --raw` path `run_andrey.sh` already uses). On the
+(the `damo report access --raw_form` path `run_andrey.sh` already uses). On the
 real `code3.json`+`meta3.json` vs `sim_raw3.txt`: spatial r=1.00, overall
 shape r=0.97, magnitude ratio 1.06 — confirms the earlier finding (math
 port looks correct) with a cleaner, DAMON-noise-free measurement.
@@ -276,7 +313,7 @@ python3 compare_io.py sim_raw3.txt sim_raw3.txt --no-heatmap
 See "Known issues" above for what's already validated math-wise (spatial
 shape and magnitude check out; time-axis pacing doesn't yet).
 
-### Level 1 — full live DAMON round-trip (needs root, run this yourself)
+### Level 1 — full live DAMON round-trip (needs root)
 
 ```bash
 cd ~ && git clone --branch andrey_math --single-branch https://github.com/DanLyss/damoLoad.git
@@ -286,13 +323,14 @@ sudo -E bash run_andrey.sh
 ```
 
 Defaults to `code3.json` + `meta3.json` + `sim_raw3.txt` as the original.
+**Confirmed working end-to-end** — see "Live DAMON test results" above.
 Does everything in one go: builds `andrey_hammer`, runs it, records with a
 live `damo record` in parallel, compares against `andrey_hammer`'s own
-`gt.log` via `compare.py`, **then** converts the fresh recording to
-io-format text (`damo report access --raw`) and runs `compare_io.py`
-against the original — the actual final "two io-format files → report"
-step from the original pipeline spec. Both reports get saved under
-`andrey_hammer/results/`.
+`gt.log` via `compare.py`, converts the fresh recording to io-format text
+(`damo report access --raw_form`) and runs `compare_io.py` against the
+original, **then** also builds the DAMON-free io-format via `gt_to_io.py`
+and runs the other two comparisons from the table above. All reports get
+saved under `andrey_hammer/results/`.
 
 To point at a different original trace or output paths:
 
@@ -301,7 +339,7 @@ sudo -E bash run_andrey.sh code3.json meta3.json /tmp/gt.log /root/andrey_out.da
 ```
 
 (`compare_io.py` itself also auto-converts any input ending in `.data`
-through `damo report access --raw` if called standalone; anything else is
+through `damo report access --raw_form` if called standalone; anything else is
 read as io-format text directly.)
 
 ## Design decisions worth knowing before touching the code
