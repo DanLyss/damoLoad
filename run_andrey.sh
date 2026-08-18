@@ -106,13 +106,28 @@ echo "==> Setting up DAMON..."
 { [ -e /sys/kernel/mm/damon/admin/kdamonds/0/state ] && echo off > /sys/kernel/mm/damon/admin/kdamonds/0/state; } 2>/dev/null || true
 sleep 0.3
 
-# how long to record: read steps/frame_dt straight out of andrey_hammer's own
-# startup line rather than re-parsing the JSON in shell
+# How long to record: read steps/frame_dt straight out of andrey_hammer's own
+# startup line rather than re-parsing the JSON in shell.
+#
+# This needs a BIG safety margin, not just a few seconds: andrey_hammer's
+# pacing loop has a known drift bug (see ANDREY_PIPELINE.md "Known issues")
+# where real per-frame duration runs well over the nominal frame_dt_ms --
+# measured 24-38% over across different runs, and it varies run to run, not
+# a fixed constant. If `damo record --timeout` is sized off the NOMINAL
+# duration, it can expire and stop recording before andrey_hammer actually
+# finishes -- which silently truncates the DAMON recording, missing however
+# much of the run happens after the timeout. That's exactly what happened
+# once: a 254-step run took 35.3s of real wall time against a nominal
+# ~25.5s, but --timeout was set to ~30.5s (nominal + 5s), so DAMON's
+# recording stopped ~5.7s (~40 frames) before andrey_hammer actually did.
+# 2x nominal + 15s flat is deliberately generous until the drift itself is
+# fixed (a debt-based pacing loop, see ANDREY_PIPELINE.md) rather than
+# tuned tight to whatever the last observed overrun happened to be.
 GEOM_LINE=$(grep "^Geometry:" "$ANDREY_LOG")
 STEPS=$(echo "$GEOM_LINE" | grep -oP 'steps=\K[0-9]+')
 FRAME_MS=$(echo "$GEOM_LINE" | grep -oP 'frame=\K[0-9.]+')
-DURATION=$(python3 -c "print(int(($STEPS * $FRAME_MS) / 1000.0) + 5)" 2>/dev/null || echo 30)
-echo "    Recording for ${DURATION}s"
+DURATION=$(python3 -c "print(int(($STEPS * $FRAME_MS) / 1000.0 * 2) + 15)" 2>/dev/null || echo 60)
+echo "    Recording for ${DURATION}s (2x nominal + 15s margin for andrey_hammer's pacing drift)"
 
 KDAMONDS=$(python3 "$SCRIPT_DIR/scripts/build_kdamonds.py" "$APP_PID" "$REGIONS_TMP" "$DAMO")
 rm -f "$REGIONS_TMP"
