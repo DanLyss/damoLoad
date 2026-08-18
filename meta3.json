@@ -1,0 +1,18 @@
+{
+    "matrix_geometry": {
+        "cols": 170,
+        "rows": 254
+    },
+    "physical_bounds": {
+        "active_min_addr": "0x556c637ac000",
+        "active_max_addr": "0x556c63856000",
+        "span_bytes": 696320,
+        "bin_size_bytes": 4096
+    },
+    "time_bounds_ms": {
+        "start_ms": 0,
+        "end_ms": 25517
+    },
+    "super_gaussian_p": 2.0,
+    "time_step_ratio": 1.0
+}
