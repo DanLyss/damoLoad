@@ -2,9 +2,9 @@
 # run_andrey.sh — build andrey_hammer, drive it from a compressed passport,
 # record with DAMON in parallel, compare against the live ground truth.
 #
-# This is the "andrey_math" counterpart to run_memtest.sh: instead of a
-# hand-written workload.json, the access pattern comes from Andrey's
-# compressed statistical model (code3.json passport + meta.json geometry).
+# Instead of a hand-written workload config, the access pattern comes from
+# Andrey's compressed statistical model (code3.json passport + meta.json
+# geometry) -- see ANDREY_PIPELINE.md for the full pipeline and file formats.
 #
 # Usage:
 #   export DAMON_DIR=/path/to/damo   # directory containing the damo executable
@@ -114,7 +114,7 @@ FRAME_MS=$(echo "$GEOM_LINE" | grep -oP 'frame=\K[0-9.]+')
 DURATION=$(python3 -c "print(int(($STEPS * $FRAME_MS) / 1000.0) + 5)" 2>/dev/null || echo 30)
 echo "    Recording for ${DURATION}s"
 
-KDAMONDS=$(python3 "$SCRIPT_DIR/memtest/scripts/build_kdamonds.py" "$APP_PID" "$REGIONS_TMP" "$DAMO")
+KDAMONDS=$(python3 "$SCRIPT_DIR/scripts/build_kdamonds.py" "$APP_PID" "$REGIONS_TMP" "$DAMO")
 rm -f "$REGIONS_TMP"
 
 if [ -z "$KDAMONDS" ] || ! echo "$KDAMONDS" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
@@ -147,8 +147,8 @@ echo "==> Comparing with DAMON..."
 LOGS_DIR="$ANDREY_DIR/results"
 mkdir -p "$LOGS_DIR"
 LOG_FILE="$LOGS_DIR/$(basename "$PASSPORT" .json)_$(date +%H%M%S).txt"
-# no heatmap_time_rows/space_cols override here (unlike run_memtest.sh, there's
-# no workload.json to read them from) — let compare.py fall back to its own
+# no heatmap_time_rows/space_cols override here -- there's no workload.json
+# to read them from, so let compare.py fall back to its own
 # defaults (duration-derived rows, n_pages columns)
 RESOL=""
 python3 "$COMPARE_PY" "$DAMON_OUT" "$GT_OUT" $RESOL "$DAMON_MIN" "$DAMON_MAX" "$DAMO" | tee >(sed 's/\x1b\[[0-9;]*m//g' > "$LOG_FILE")

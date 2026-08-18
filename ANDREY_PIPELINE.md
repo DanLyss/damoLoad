@@ -63,10 +63,11 @@ io-vs-io compare).
 | `meta3.json` | Real geometry matching `code3.json` — confirmed: its address span (696320 B = 680 KiB) matches `sim_raw3.txt` exactly, so this is the geometry that produced it | Given, real |
 | `sim_raw3.txt` | Real example output of the Python model on `code3.json`+`meta3.json` (io-format text, 254 snapshots) | Given, real — use as the shape reference |
 | `damo_replay.md` | Investigation notes: why `damo replay` (damo's own built-in replay subcommand) does NOT reproduce a real address-space pattern — motivates `andrey_hammer`'s design | Given, real |
-| `compare.py`, `run_memtest.sh`, `memtest/`, `hammer/` | Pre-existing ground-truth-vs-DAMON tooling, unrelated to the passport model except that `andrey_hammer` reuses `compare.py`'s gt.log format and `memtest/scripts/build_kdamonds.py` | Given, real, unchanged |
+| `compare.py`, `scripts/build_kdamonds.py`, `patches/` | Pre-existing DAMON-comparison tooling this pipeline reuses (gt.log-vs-DAMON heatmap renderer, kdamonds JSON builder, required damo patches). An older, unrelated `memtest`/`hammer`/`run_memtest.sh` project used to live in this repo alongside these — removed from this branch since it's not part of the passport pipeline; only these two files were actual dependencies | Given, real, unchanged |
 | **`andrey_hammer/`** | **New.** C port of the passport model that drives LIVE memory accesses in real time (not a pre-rendered file). See `andrey_hammer/README.md` for full design rationale | **Built, compiled, checked against `sim_raw3.txt` on real `code3.json`+`meta3.json`: spatial-profile r=0.89, magnitude within ~4% once width-weighted (see "Known issues"). Time-axis fidelity still degraded by a real pacing bug** |
-| **`run_andrey.sh`** | **New.** Automated build → run → `damo record` → compare orchestration, mirrors `run_memtest.sh` | **Built. NOT yet run end-to-end** (needs interactive `sudo` — see Testing) |
-| **`compare_io.py`** | **New.** Direct io-format-vs-io-format shape comparison (Pearson r, cosine similarity, normalized RMSE, separate time/space-profile correlations, ASCII heatmap) | **Built, tested** — self-comparison sanity checks, and used (via ad-hoc gt.log conversion) for the C-vs-Python math check above |
+| **`run_andrey.sh`** | **New.** Automated build → run → `damo record` → compare orchestration | **Built. NOT yet run end-to-end** (needs interactive `sudo` — see Testing) |
+| **`compare_io.py`** | **New.** Direct io-format-vs-io-format shape comparison (Pearson r, cosine similarity, normalized RMSE, separate time/space-profile correlations, ASCII heatmap) | **Built, tested** — self-comparison sanity checks, and used for the C-vs-Python math check below |
+| **`andrey_hammer/gt_to_io.py`** | **New.** Converts `gt.log`+`gt.log.frames` into io-format text directly, no DAMON involved — isolates replay fidelity from DAMON's own measurement noise | **Built, tested** — see "Known issues" below (r=0.97 vs `sim_raw3.txt`) |
 
 ## ⚠️ Filename trap in the Python reference scripts
 
@@ -125,14 +126,34 @@ same way and stay comparable).
 
 **Real, still-open issue: timing drift in the live pacing loop.** Under
 WSL2, `andrey_hammer.c`'s per-frame `sleep_ns(remaining_ns)` padding runs
-~20–30% over its nominal `frame_dt_ms` (e.g. 254 steps × 100.46ms nominal
-measured out to something closer to 305 frames' worth of wall-clock time
-when re-bucketed). It doesn't carry debt across frames the way
-`memtest/src/track.c`'s debt-based loop does, so overruns compound. This
-degrades any time-profile comparison against nominal frame boundaries
-(observed time-profile r dropped to ~0.43 vs a healthy spatial r of 0.89 on
-otherwise-matching data) and is worth fixing by porting `track.c`'s
-debt-based pacing pattern in before trusting time-axis comparisons.
+~20–30% over its nominal `frame_dt_ms` (measured directly, not inferred —
+`andrey_hammer` now writes `<gt.log>.frames` with each frame's real
+`start_ns`/`end_ns`; a 100.46ms nominal frame measured out to ~124ms
+actual in one run). It doesn't carry debt across frames — each frame just
+pads with whatever time is left, so overruns compound instead of being
+caught up. This degrades any comparison against *nominal* frame boundaries
+(time-profile r ~0.43 vs spatial r ~0.89 on otherwise-matching data, see
+`gt_to_io.py` below which sidesteps this by using the real `.frames`
+boundaries instead of nominal ones). Worth fixing with a debt-based pacing
+loop (accumulate `elapsed - frame_dt_ms` and let it eat into the next
+frame's budget, the same idea used elsewhere in this codebase for
+sub-frame access pacing) before trusting time-axis comparisons against
+nominal boundaries.
+
+**`andrey_hammer/gt_to_io.py`** — converts `gt.log` + `gt.log.frames`
+straight into an io-format text file, bypassing DAMON's own 5ms/200Hz
+sampling entirely. Useful for separating two different questions: "did
+`andrey_hammer`'s replay match the original passport's model" (this
+script, no DAMON noise) vs "did DAMON *observe* that replay correctly"
+(the `damo report access --raw` path `run_andrey.sh` already uses). On the
+real `code3.json`+`meta3.json` vs `sim_raw3.txt`: spatial r=1.00, overall
+shape r=0.97, magnitude ratio 1.06 — confirms the earlier finding (math
+port looks correct) with a cleaner, DAMON-noise-free measurement.
+
+```bash
+python3 andrey_hammer/gt_to_io.py --gt gt.log --frames gt.log.frames --meta meta3.json --output gt_as_io.txt
+python3 compare_io.py sim_raw3.txt gt_as_io.txt
+```
 
 ## Exact file formats `andrey_hammer` expects
 
@@ -249,9 +270,9 @@ read as io-format text directly.)
   a pre-rendered Python-generated schedule file. This was also deliberate:
   the point is "how to hit memory right now," not "here's a script of what
   to do."
-- **`gt.log` format is unchanged from `memtest`'s**, specifically so the
-  existing `compare.py` works against `andrey_hammer`'s output with zero
-  modification.
+- **`gt.log`'s format (`# region N base=... pages=...` + `ts_ns region page`
+  rows) matches what `compare.py` already expects**, so it works against
+  `andrey_hammer`'s output with zero modification.
 - **`compare_io.py` compares shape, not literal position** — because
   addresses don't match by design, everything is normalized to a 0..1
   fraction of each file's own address span before binning. Read the

@@ -50,9 +50,9 @@
  */
 
 /* ════════════════════════════════════════════════════════════════════════
-   Minimal JSON parser (objects/arrays/strings/numbers only — same
-   approach as memtest/src/workload.c, duplicated here to keep this a
-   single, dependency-free translation unit).
+   Minimal JSON parser (objects/arrays/strings/numbers only) — kept inline
+   here rather than pulled from a shared header, to keep this a single,
+   dependency-free translation unit.
    ════════════════════════════════════════════════════════════════════════ */
 
 typedef enum { J_STR, J_NUM, J_OBJ, J_ARR, J_BOOL, J_NULL } jtype_t;
@@ -475,7 +475,7 @@ int main(int argc, char **argv) {
 
     rng_t rng = { .seed = seed ? seed : 1, .spare = 0, .has_spare = 0 };
 
-    /* ── announce ourselves (same markers run_memtest.sh already parses) ── */
+    /* ── announce ourselves (markers run_andrey.sh parses: PID/REGION/READY) ── */
     printf("# PID=%d\n", getpid());
     printf("# REGION 0 0x%lx 0x%lx\n", (unsigned long)region, (unsigned long)region + total_bytes);
     printf("PID:      %d\n", getpid());
@@ -500,6 +500,18 @@ int main(int argc, char **argv) {
     if (!gt) { perror(gt_path); return 1; }
     fprintf(gt, "# region 0 base=0x%lx pages=%zu\n", (unsigned long)region, n_pages);
     fprintf(gt, "# ts_ns region page\n");
+
+    /* Frame boundary log — the ACTUAL wall-clock start/end of each frame
+       (after padding), not the nominal frame_dt_ms. gt_to_io.py bins gt.log
+       touches by these real windows instead of assuming perfect pacing, so
+       an io-format file built from this reflects what andrey_hammer truly
+       did rather than what it was supposed to do. Also makes the pacing
+       drift measurable directly (end-start vs nominal frame_dt_ms). */
+    char frames_path[4160];
+    snprintf(frames_path, sizeof(frames_path), "%s.frames", gt_path);
+    FILE *frames_f = fopen(frames_path, "w");
+    if (!frames_f) { perror(frames_path); return 1; }
+    fprintf(frames_f, "# frame_idx start_ns end_ns nominal_dt_ms\n");
 
     double *profile = malloc(cols * sizeof(double));
     long *row_accesses = malloc(cols * sizeof(long));
@@ -593,14 +605,21 @@ int main(int argc, char **argv) {
         long remaining_ns = (long)(frame_dt_ms * 1e6) - elapsed_ns;
         sleep_ns(remaining_ns);
 
+        uint64_t frame_end = ts_ns();
+        fprintf(frames_f, "%ld %llu %llu %.3f\n", t_idx,
+                (unsigned long long)frame_start, (unsigned long long)frame_end, frame_dt_ms);
+
         total_frames++;
         total_touches += (uint64_t)frame_total;
     }
 
     fflush(gt);
     fclose(gt);
+    fflush(frames_f);
+    fclose(frames_f);
     printf("Total: %ld frames, %llu accesses simulated in real time\n",
            total_frames, (unsigned long long)total_touches);
+    printf("Frame boundaries: %s\n", frames_path);
 
     free(sched); free(profile); free(row_accesses); free(bin_boundaries);
     munmap(region, total_bytes);

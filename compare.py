@@ -223,7 +223,7 @@ def main():
         max_hz = max(nonzero) if nonzero else 1.0
 
         print(f'\n  scale: 0={min_hz:.1f} Hz  ...  9={max_hz:.1f} Hz')
-        render(gt_grid, t_rows, s_cols, 'GT   — what memtest actually did', min_hz, max_hz)
+        render(gt_grid, t_rows, s_cols, 'GT   — what actually happened', min_hz, max_hz)
         if damon_grid:
             render(damon_grid, t_rows, s_cols, 'DAMON — what kernel observed', min_hz, max_hz)
         else:

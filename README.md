@@ -1,41 +1,37 @@
 # damoLoad
 
-Tools for generating controlled memory access workloads and comparing them against what [DAMON](https://docs.kernel.org/mm/damon/index.html) actually observes.
-
-> **Working on the `andrey_hammer` / compressed-passport pipeline?** Start
-> with [`ANDREY_PIPELINE.md`](ANDREY_PIPELINE.md) — status, exact file
-> formats, build/test commands, what's validated and what's still missing.
+Real-time memory load simulator built from a compressed statistical model of
+a recorded [DAMON](https://docs.kernel.org/mm/damon/index.html) access
+trace — see [`ANDREY_PIPELINE.md`](ANDREY_PIPELINE.md) for the full pipeline,
+status, exact file formats, and build/test commands.
 
 ```
 damoLoad/
-├── run_memtest.sh   — full automated runner: build → record → compare
-├── compare.py       — per-region GT vs DAMON ASCII heatmap renderer
-├── memtest/         — structured workload generator with ground truth logging
-│   └── scripts/
-│       ├── gen_config_nr_regions_sweep.py — generates the ~5500-region sweep workload
-│       ├── build_kdamonds_sweep.py        — kdamonds JSON builder for one nr_regions sweep point
-│       ├── run_nr_regions_sweep.sh        — orchestrates the full min_nr_regions/max_nr_regions sweep
-│       └── nr_regions_sweep_report.py     — computes and plots the 6-line sweep chart
-├── hammer/          — minimal single-file load generator for quick experiments
+├── ANDREY_PIPELINE.md      — start here: pipeline diagram, status, formats, tests
+├── code3.json              — real 10-channel statistical "passport"
+├── meta3.json              — real geometry matching code3.json
+├── sim_raw3.txt            — real reference io-format trace (Python model output)
 │
-├── generate.py / reconstruct_heatmap.py / format_raw.py / simulate.py
-│                    — Andrey's compressed-passport model: synthesizes a
-│                      synthetic io-format trace from a 10-channel
-│                      statistical "passport" (code3.json) + geometry
-│                      (meta.json) — see damo_replay.md for why a naive
-│                      replay of a recorded trace doesn't work
-├── andrey_hammer/   — real-time C port of that same model: computes the
-│                      profile itself, per frame, and drives LIVE memory
-│                      accesses on its own mmap'd region (not a pre-
-│                      rendered schedule) — the "C program" stage of the
-│                      passport → live-access pipeline
-├── run_andrey.sh    — automated runner for andrey_hammer: build → replay
-│                      → record → compare (mirrors run_memtest.sh)
-└── compare_io.py    — direct io-format vs io-format comparison (address-
-                       fraction-normalized shape metrics + ASCII heatmap);
-                       for comparing an original trace's io-format dump
-                       against a fresh `damo report access --raw` of
-                       whatever DAMON observed during an andrey_hammer run
+├── generate.py (1).txt / reconstruct_heatmap.py.txt / format_raw.py.txt / simulate.py.txt
+│                          — Andrey's Python reference model: passport+meta
+│                            → synthetic io-format trace (see damo_replay.md
+│                            for why a naive replay of a recorded trace
+│                            doesn't work, motivating the C port below)
+│
+├── andrey_hammer/          — real-time C port: computes the profile itself,
+│                             per frame, and drives LIVE memory accesses on
+│                             its own mmap'd region (not a pre-rendered file)
+├── run_andrey.sh           — automated runner: build → replay → damo record
+│                             → compare (GT-vs-DAMON, then io-format vs io-format)
+├── compare.py               — per-region GT vs DAMON ASCII heatmap renderer
+│                             (used by run_andrey.sh; damo report heatmap)
+├── compare_io.py            — direct io-format vs io-format shape comparison
+│                             (address-fraction-normalized, ASCII heatmap)
+├── scripts/build_kdamonds.py — builds a kdamonds JSON config for damo record
+│                             from a PID + region list (used by run_andrey.sh)
+├── patches/                 — required damo patches, see below
+└── damo_replay.md           — investigation notes on why damo's own `replay`
+                              subcommand doesn't reproduce a real address space
 ```
 
 ## Quick Start
@@ -43,62 +39,21 @@ damoLoad/
 Requires Linux with DAMON (`CONFIG_DAMON_VADDR=y`, `CONFIG_DAMON_SYSFS=y`), damo, GCC, Python ≥ 3.10.
 
 ```bash
-git clone https://github.com/DanLyss/damoLoad.git && cd damoLoad
+git clone --branch andrey_math https://github.com/DanLyss/damoLoad.git && cd damoLoad
+export DAMON_DIR=/usr/local/bin   # or wherever damo lives, see ANDREY_PIPELINE.md
+sudo -E bash run_andrey.sh
 ```
 
-**Set `DAMON_DIR`** — path to the directory containing the `damo` executable (required):
-
-```bash
-# pip install damo  →  damo lands in /usr/local/bin
-export DAMON_DIR=/usr/local/bin
-
-# git checkout of damonitor/damo  →  damo is at the repo root
-export DAMON_DIR=/path/to/damo
-```
-
-**Run a workload:**
-
-```bash
-sudo bash run_memtest.sh memtest/configs/11_sine_slow.json
-
-# 100-region stress test
-sudo bash run_memtest.sh memtest/configs/51_100reg_uniform_const.json
-```
-
-Results saved to `memtest/results/`. See [memtest/README.md](memtest/README.md) for the full config format.
-
-## `run_memtest.sh` — What It Does
-
-This is the main entry point. You give it a config JSON, it does everything automatically:
-
-```bash
-sudo bash run_memtest.sh [config.json] [gt.log] [damon.data]
-```
-
-**Step by step:**
-
-1. **Prints the config** — duration, regions, tracks, heatmap resolution
-2. **Builds `memtest`** via `make` (incremental)
-3. **Starts `memtest --auto config.json gt.log`** — the process mmaps all regions, prefaults all pages, then waits for `SIGUSR1` before starting accesses
-4. **Parses the printed region addresses** from memtest's stdout — gets the exact virtual address ranges that were mmap'd
-5. **Builds DAMON config** — uses `damo args damon` for the first region to get the correct JSON schema, then patches in all N regions sorted by ascending address. Sorting is required by the DAMON kernel interface.
-6. **Starts `damo record`** — records DAMON observations to a `.data` file
-7. **Sends `SIGUSR1`** to memtest — workload begins
-8. **Waits** for both memtest and damo to finish
-9. **Runs `compare.py`** — for each region, calls `damo report heatmap --address_range START END` scoped to that region, renders GT and DAMON side by side as ASCII heatmaps
-10. **Saves result** to `memtest/results/<config_name>_<time>.txt`
-
-**Why `--auto` mode?** Without it, you'd have to manually read the PID and region addresses from memtest's output, configure DAMON, and signal the process yourself. `--auto` mode makes memtest print machine-readable markers (`# PID=`, `# REGION`, `# READY`) so `run_memtest.sh` can parse them and automate everything.
-
-**Why `fvaddr` ops?** `fvaddr` (fixed virtual address) is DAMON's mode for monitoring specific virtual address ranges of a process. Unlike `vaddr` mode (which adapts region boundaries), `fvaddr` keeps the regions exactly where we specify — matching the mmap'd regions in memtest. This is critical for comparing against ground truth.
-
-**Why sort regions?** The DAMON kernel sysfs interface rejects configurations where regions are not in ascending order of start address — it returns `EINVAL`. memtest prints regions in allocation order (often descending), so `run_memtest.sh` sorts them before passing to DAMON.
-
-**Regions are not `MAP_FIXED` by default.** `region_alloc()` (`memtest/src/region.c`) only adds `MAP_FIXED_NOREPLACE` when a config explicitly sets a region's `"address"` field — none of the 101 configs shipped in `memtest/configs/` do this, so every region in every existing config is a plain `mmap(NULL, ...)`, placed wherever the kernel's allocator puts it. In practice, consecutive anonymous mmaps tend to land packed tightly together (verified: 5497/5499 region boundaries touching with zero gap in one 5500-region run), but this is an allocator implementation detail, not a guarantee — expect occasional large gaps (one ~162 MB gap was observed in that same run) if something else gets mapped in between. Set `"address"` explicitly (memtest already supports it) if a test needs a guaranteed, controlled layout.
+That builds `andrey_hammer`, drives a live memory-access replay of
+`code3.json`+`meta3.json` in real time, records it with a live `damo
+record`, and produces two reports under `andrey_hammer/results/`: ground
+truth vs DAMON, and original io-format vs this run's io-format. Full
+details, known issues, and lower-level manual test commands are in
+[`ANDREY_PIPELINE.md`](ANDREY_PIPELINE.md).
 
 ## `compare.py` — Per-Region Heatmaps
 
-Called automatically by `run_memtest.sh`, but can be run standalone:
+Called automatically by `run_andrey.sh`, but can be run standalone:
 
 ```bash
 python3 compare.py damon.data gt.log [time_rows] [space_cols] [damon_base] [damon_max]
@@ -116,7 +71,7 @@ For each region it:
 
   scale: 0=3.0 Hz  ...  9=26.2 Hz
 
-  GT   — what memtest actually did
+  GT   — what actually happened
   2314521235
   4430342432
   ...
@@ -133,29 +88,13 @@ For each region it:
 
 Time goes down (one row = duration/time_rows seconds). Space goes right (one col = region_size/space_cols).
 
-## `run_nr_regions_sweep.sh` — min_nr_regions/max_nr_regions Sensitivity Sweep
+## `compare_io.py` — io-format vs io-format
 
-Tests how DAMON's `min_nr_regions`/`max_nr_regions` monitoring-attribute bounds affect the fidelity of its *aggregate* access-rate signal (total accesses/sec summed across every tracked region) against ground truth, at a scale closer to a real heavyweight application (~5500 memory regions) than the existing 100–300 region stress configs.
-
-```bash
-sudo -E bash memtest/scripts/run_nr_regions_sweep.sh [workload.json]
-```
-
-Default workload: `memtest/configs/101_5500reg_realistic_app.json` (generated by `gen_config_nr_regions_sweep.py` if missing) — 5500 regions with a realistic size distribution (skewed toward small 16–64 KB allocations, with a long tail up to 1 MB; run the generator to see the exact histogram it prints) and a hot/warm/cold access-rate split (5% / 20% / 75% of regions), all riding a shared 4-phase step envelope (15s each) so the aggregate signal has a visible, checkable shape.
-
-**What it does:**
-
-1. Builds `memtest`, generates the config if it's missing.
-2. Runs the workload **5 times sequentially** — once per `min_nr_regions` sweep point (100, 500, 1000, 2000, 5000; `max_nr_regions` = 5× min each time), each with its own fresh memtest run and a single-kdamond `damo record`.
-3. Runs `nr_regions_sweep_report.py`, which loads each run's ground truth and DAMON recording, computes total accesses/sec over time for both, and renders one PNG with 6 lines (5 DAMON configs + real ground truth) to `memtest/results/`.
-
-**Why 5 sequential runs instead of 1 run with 5 simultaneous kdamonds?** DAMON's sysfs genuinely supports multiple concurrent kdamond contexts on the same target process, but `damo record`'s default (tracer-based) recording path silently merges all of them into one undifferentiated record — `kdamond_idx`/`context_idx` come back as `None`. Its `--snapshot` mode does tag records correctly but fails outright when combined with freshly-turned-on kdamonds. Running one real kdamond at a time — the same single-kdamond path `run_memtest.sh` already uses — sidesteps both problems. The workload config is deterministic, so the ground truth shape is consistent across runs modulo real thread-scheduling jitter.
-
-**Metric caveats (found the hard way, worth knowing before trusting the chart):**
-
-- The aggregate Hz is `sum(region.nr_accesses.in_hz(actual_snapshot_duration))` across all currently-tracked regions — deliberately **not** weighted by region size (the same size-weighting bug already fixed in the heatmap tool below: weighting by size estimates bandwidth, not access count, and inflates whenever a region's real hot spot is a small fraction of the region's size).
-- It uses each snapshot's **actual** elapsed duration (`end_time − start_time`), not the nominal configured `aggr_us`. At ~5500 real regions, DAMON's own aggregation cycle can take 3–7× longer than the configured 100ms (measured up to ~693ms) — using the nominal value there inflates the estimate and produces a misleadingly monotonic-looking "improvement" with region count that isn't real.
-- Even after both fixes, DAMON's aggregate estimate stays well below ground truth at this scale — DAMON's own per-cycle overhead across thousands of regions becomes the bottleneck, not the `min_nr_regions` budget. There's also an unexplained real rise in DAMON's reported activity 5–10s *before* some ground-truth phase transitions that's still under investigation — don't take the chart as a fully-understood result yet.
+Compares two files already in (or converted to) DAMON's raw access-report
+text format directly — no ground-truth log needed. See the docstring at the
+top of the file, and [`ANDREY_PIPELINE.md`](ANDREY_PIPELINE.md)'s "Design
+decisions" section for why this is a *shape* comparison (address-fraction
+normalized) rather than a literal address diff.
 
 ## Required `damo` Patches
 
